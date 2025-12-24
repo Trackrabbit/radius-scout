@@ -66,43 +66,63 @@ async function geocodeAddress(address) {
 // ===== Overpass POI query =====
 // Uses Overpass QL to query nodes/ways/relations within an around-radius. [web:24][web:28]
 function buildOverpassQuery(lat, lon, radiusMeters, options) {
-  // amenity keys by category
-  const filters = [];
+  const blocks = [];
 
   if (options.worship) {
-    filters.push('node["amenity"="place_of_worship"]');
+    blocks.push(`
+      nwr["amenity"="place_of_worship"](around:${radiusMeters},${lat},${lon});
+    `);
   }
   if (options.schools) {
-    filters.push('node["amenity"="school"]');
+    blocks.push(`
+      nwr["amenity"="school"](around:${radiusMeters},${lat},${lon});
+    `);
   }
   if (options.parks) {
-    // Parks are usually "leisure=park" instead of amenity. [web:24]
-    filters.push('node["leisure"="park"]');
+    blocks.push(`
+      nwr["leisure"="park"](around:${radiusMeters},${lat},${lon});
+    `);
   }
   if (options.daycare) {
-    // childcare/daycare: amenity=childcare is common. [web:24]
-    filters.push('node["amenity"="childcare"]');
+    blocks.push(`
+      nwr["amenity"="childcare"](around:${radiusMeters},${lat},${lon});
+    `);
   }
 
-  if (filters.length === 0) {
+  if (blocks.length === 0) {
     return null;
   }
 
-  // Build a single union query for efficiency
-  const aroundClause = `around:${radiusMeters},${lat},${lon}`;
-  const body = filters
-    .map(f => `${f}(${aroundClause});`)
-    .join("\n");
+  const body = blocks.join("\n");
 
   const query = `
     [out:json][timeout:25];
     (
       ${body}
     );
-    out body;
+    out center;
   `;
 
   return query;
+}
+
+async function fetchCenterPOI(lat, lon, options) {
+  const tinyRadius = 5; // meters
+  const q = buildOverpassQuery(lat, lon, tinyRadius, options);
+  if (!q) return [];
+
+  const url = "https://overpass.kumi.systems/api/interpreter"; // or your chosen instance
+  const res = await fetch(url, {
+    method: "POST",
+    body: q
+  });
+
+  if (!res.ok) {
+    return [];
+  }
+
+  const data = await res.json();
+  return data.elements || [];
 }
 
 async function fetchPOIs(lat, lon, radiusMeters, options) {
@@ -243,11 +263,25 @@ searchBtn.addEventListener("click", async () => {
       fillOpacity: 0.15
     }).addTo(map);
 
-    // 2. Query POIs
-    const elements = await fetchPOIs(loc.lat, loc.lon, radiusMeters, options);
+  // 2. Query POIs in radius
+  const elements = await fetchPOIs(loc.lat, loc.lon, radiusMeters, options);
+  
+  // 2b. Query POI exactly at the center (in case the address is itself a school, church, etc.)
+  const centerElements = await fetchCenterPOI(loc.lat, loc.lon, options);
+  
+  // Merge and remove duplicates by OSM id
+  const all = [...elements, ...centerElements];
+  const seen = new Set();
+  const unique = all.filter(el => {
+    const key = `${el.type}/${el.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  
+  // 3. Add to map
+  addPoisToMap(unique);
 
-    // 3. Add to map
-    addPoisToMap(elements);
   } catch (err) {
     console.error(err);
     alert(err.message || "Something went wrong. Try again.");
@@ -259,4 +293,5 @@ searchBtn.addEventListener("click", async () => {
 
 // Initialize
 initMonetization();
+
 
