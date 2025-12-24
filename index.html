@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RadiusScout</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrEHI6lHDBcdoU2S2mGm6H3/tE8="
+    crossorigin=""
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>RadiusScout</h1>
+      <p>Find churches, schools, parks, and daycares around any address.</p>
+    </header>
+
+    <section id="controls">
+      <div class="form-row">
+        <label for="addressInput">Address</label>
+        <input
+          type="text"
+          id="addressInput"
+          placeholder="Enter an address (e.g., 123 Main St, Macon, GA)"
+        />
+      </div>
+
+      <div class="form-row">
+        <label for="radiusSelect">Radius</label>
+        <select id="radiusSelect">
+          <option value="152">500 ft</option>
+          <option value="305">1000 ft</option>
+          <option value="1609">1 mile</option>
+          <option value="3219">2 miles</option>
+        </select>
+      </div>
+
+      <div class="form-row checkbox-row">
+        <span>POI Types:</span>
+        <label>
+          <input type="checkbox" id="poiWorship" checked />
+          Churches / Worship
+        </label>
+        <label>
+          <input type="checkbox" id="poiSchools" checked />
+          Schools
+        </label>
+        <label>
+          <input type="checkbox" id="poiParks" checked />
+          Parks
+        </label>
+        <label>
+          <input type="checkbox" id="poiDaycare" checked />
+          Daycares
+        </label>
+      </div>
+
+      <div class="form-row">
+        <button id="searchBtn">Search Area</button>
+      </div>
+
+      <div id="summaryPopup" class="summary hidden">
+        <h3>POI Summary</h3>
+        <ul>
+          <li>Churches / Worship: <span id="countWorship">0</span></li>
+          <li>Schools: <span id="countSchools">0</span></li>
+          <li>Parks: <span id="countParks">0</span></li>
+          <li>Daycares: <span id="countDaycare">0</span></li>
+        </ul>
+      </div>
+
+      <div id="monetizationStub" class="monetization">
+        <!-- Monetization stub: replace this with ads, payment buttons, etc. -->
+        <p>
+          Premium feature space: upgrade to unlock advanced analytics, saved
+          searches, and PDF reports.
+        </p>
+      </div>
+    </section>
+
+    <section id="mapSection">
+      <div id="map"></div>
+    </section>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script src="app.js"></script>
+</body>
+</html>
