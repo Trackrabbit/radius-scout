@@ -109,7 +109,7 @@ async function fetchPOIs(lat, lon, radiusMeters, options) {
   const q = buildOverpassQuery(lat, lon, radiusMeters, options);
   if (!q) return [];
 
-  const url = "https://overpass-api.de/api/interpreter";
+  const url = "https://overpass.kumi.systems/api/interpreter";
   const res = await fetch(url, {
     method: "POST",
     body: q
@@ -259,3 +259,4 @@ searchBtn.addEventListener("click", async () => {
 
 // Initialize
 initMonetization();
+
