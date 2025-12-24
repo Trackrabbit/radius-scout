@@ -1,103 +1,261 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>RadiusScout</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+// ===== Map setup =====
+const map = L.map("map").setView([32.8407, -83.6324], 12); // Macon, GA default
 
-  <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
 
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div id="app">
-    <header>
-      <h1>RadiusScout</h1>
-      <p>Find churches, schools, parks, and daycares around any address.</p>
-    </header>
+let centerMarker = null;
+let radiusCircle = null;
+let poiLayer = L.layerGroup().addTo(map);
 
-    <section id="controls">
-      <div class="form-row">
-        <label for="addressInput">Address</label>
-        <input
-          type="text"
-          id="addressInput"
-          placeholder="Enter an address (e.g., 123 Main St, Macon, GA)"
-        />
-      </div>
+// Simple color scheme for POI icons
+const poiStyles = {
+  worship: { color: "#f56565", label: "Place of Worship" },
+  school: { color: "#ecc94b", label: "School" },
+  park: { color: "#48bb78", label: "Park" },
+  daycare: { color: "#9f7aea", label: "Daycare" }
+};
 
-      <div class="form-row">
-        <label for="radiusSelect">Radius</label>
-        <select id="radiusSelect">
-          <option value="152">500 ft</option>
-          <option value="305">1000 ft</option>
-          <option value="1609">1 mile</option>
-          <option value="3219">2 miles</option>
-        </select>
-      </div>
+function createPoiIcon(color) {
+  return L.divIcon({
+    className: "custom-poi-icon",
+    html: `<span style="
+      display:inline-block;
+      width:14px;
+      height:14px;
+      border-radius:50%;
+      background:${color};
+      box-shadow:0 0 0 2px rgba(0,0,0,0.6);
+      "></span>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7]
+  });
+}
 
-      <div class="form-row checkbox-row">
-        <span>POI Types:</span>
-        <label>
-          <input type="checkbox" id="poiWorship" checked />
-          Churches / Worship
-        </label>
-        <label>
-          <input type="checkbox" id="poiSchools" checked />
-          Schools
-        </label>
-        <label>
-          <input type="checkbox" id="poiParks" checked />
-          Parks
-        </label>
-        <label>
-          <input type="checkbox" id="poiDaycare" checked />
-          Daycares
-        </label>
-      </div>
+// ===== Geocoding (Nominatim) =====
+// Nominatim usage policy: add a proper User-Agent / Referer in production. [web:16]
+async function geocodeAddress(address) {
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("q", address);
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "1");
 
-      <div class="form-row">
-        <button id="searchBtn">Search Area</button>
-      </div>
+  const res = await fetch(url.toString(), {
+    headers: {
+      "Accept-Language": "en"
+    }
+  });
 
-      <div id="summaryPopup" class="summary hidden">
-        <h3>POI Summary</h3>
-        <ul>
-          <li>Churches / Worship: <span id="countWorship">0</span></li>
-          <li>Schools: <span id="countSchools">0</span></li>
-          <li>Parks: <span id="countParks">0</span></li>
-          <li>Daycares: <span id="countDaycare">0</span></li>
-        </ul>
-      </div>
+  if (!res.ok) throw new Error("Geocoding request failed");
 
-      <div id="monetizationStub" class="monetization">
-        <!-- Monetization stub: replace this with ads, payment buttons, etc. -->
-        <p>
-          Premium feature space: upgrade to unlock advanced analytics, saved
-          searches, and PDF reports.
-        </p>
-      </div>
-    </section>
+  const data = await res.json();
+  if (!data || data.length === 0) {
+    throw new Error("No results for that address");
+  }
 
-    <section id="mapSection">
-      <div id="map"></div>
-    </section>
-  </div>
+  const { lat, lon, display_name } = data[0];
+  return {
+    lat: parseFloat(lat),
+    lon: parseFloat(lon),
+    label: display_name
+  };
+}
 
-  <!-- Leaflet JS -->
-  <script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""
-  ></script>
+// ===== Overpass POI query =====
+// Uses Overpass QL to query nodes/ways/relations within an around-radius. [web:24][web:28]
+function buildOverpassQuery(lat, lon, radiusMeters, options) {
+  // amenity keys by category
+  const filters = [];
 
-  <script src="app.js"></script>
-</body>
-</html>
+  if (options.worship) {
+    filters.push('node["amenity"="place_of_worship"]');
+  }
+  if (options.schools) {
+    filters.push('node["amenity"="school"]');
+  }
+  if (options.parks) {
+    // Parks are usually "leisure=park" instead of amenity. [web:24]
+    filters.push('node["leisure"="park"]');
+  }
+  if (options.daycare) {
+    // childcare/daycare: amenity=childcare is common. [web:24]
+    filters.push('node["amenity"="childcare"]');
+  }
 
+  if (filters.length === 0) {
+    return null;
+  }
+
+  // Build a single union query for efficiency
+  const aroundClause = `around:${radiusMeters},${lat},${lon}`;
+  const body = filters
+    .map(f => `${f}(${aroundClause});`)
+    .join("\n");
+
+  const query = `
+    [out:json][timeout:25];
+    (
+      ${body}
+    );
+    out body;
+  `;
+
+  return query;
+}
+
+async function fetchPOIs(lat, lon, radiusMeters, options) {
+  const q = buildOverpassQuery(lat, lon, radiusMeters, options);
+  if (!q) return [];
+
+  const url = "https://overpass-api.de/api/interpreter";
+  const res = await fetch(url, {
+    method: "POST",
+    body: q
+  });
+
+  if (!res.ok) {
+    throw new Error("Overpass API request failed");
+  }
+
+  const data = await res.json();
+  return data.elements || [];
+}
+
+function categorizeElement(el) {
+  if (!el.tags) return null;
+
+  if (el.tags.amenity === "place_of_worship") return "worship";
+  if (el.tags.amenity === "school") return "school";
+  if (el.tags.leisure === "park") return "park";
+  if (el.tags.amenity === "childcare") return "daycare";
+
+  return null;
+}
+
+function addPoisToMap(elements) {
+  poiLayer.clearLayers();
+
+  const counts = {
+    worship: 0,
+    school: 0,
+    park: 0,
+    daycare: 0
+  };
+
+  elements.forEach(el => {
+    const cat = categorizeElement(el);
+    if (!cat) return;
+
+    const lat = el.lat || (el.center && el.center.lat);
+    const lon = el.lon || (el.center && el.center.lon);
+    if (lat == null || lon == null) return;
+
+    counts[cat] += 1;
+
+    const style = poiStyles[cat];
+    const icon = createPoiIcon(style.color);
+
+    const name = el.tags.name || "(Unnamed)";
+    const details = [];
+    if (el.tags.denomination) details.push(`Denomination: ${el.tags.denomination}`);
+    if (el.tags.religion) details.push(`Religion: ${el.tags.religion}`);
+    if (el.tags.operator) details.push(`Operator: ${el.tags.operator}`);
+
+    const popupHtml = `
+      <strong>${style.label}</strong><br/>
+      ${name}<br/>
+      <small>${details.join("<br/>")}</small>
+    `;
+
+    L.marker([lat, lon], { icon }).bindPopup(popupHtml).addTo(poiLayer);
+  });
+
+  updateSummary(counts);
+}
+
+function updateSummary(counts) {
+  document.getElementById("countWorship").textContent = counts.worship;
+  document.getElementById("countSchools").textContent = counts.school;
+  document.getElementById("countParks").textContent = counts.park;
+  document.getElementById("countDaycare").textContent = counts.daycare;
+
+  const summary = document.getElementById("summaryPopup");
+  summary.classList.remove("hidden");
+}
+
+// ===== Monetization stub =====
+function initMonetization() {
+  // Placeholder: call ad network, show paywall, etc.
+  // Example:
+  //   loadAds();
+  //   if (!userIsPaid) limit radius or results.
+  console.log("Monetization stub initialized.");
+}
+
+// ===== Main flow =====
+const addressInput = document.getElementById("addressInput");
+const radiusSelect = document.getElementById("radiusSelect");
+const searchBtn = document.getElementById("searchBtn");
+
+searchBtn.addEventListener("click", async () => {
+  const address = addressInput.value.trim();
+  if (!address) {
+    alert("Please enter an address.");
+    return;
+  }
+
+  const radiusMeters = parseInt(radiusSelect.value, 10);
+
+  const options = {
+    worship: document.getElementById("poiWorship").checked,
+    schools: document.getElementById("poiSchools").checked,
+    parks: document.getElementById("poiParks").checked,
+    daycare: document.getElementById("poiDaycare").checked
+  };
+
+  searchBtn.disabled = true;
+  searchBtn.textContent = "Searching...";
+
+  try {
+    // 1. Geocode
+    const loc = await geocodeAddress(address);
+
+    // Center map
+    map.setView([loc.lat, loc.lon], 15);
+
+    if (centerMarker) {
+      map.removeLayer(centerMarker);
+    }
+    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map);
+    centerMarker.bindPopup(`<strong>Center</strong><br/>${loc.label}`).openPopup();
+
+    // Draw radius
+    if (radiusCircle) {
+      map.removeLayer(radiusCircle);
+    }
+    radiusCircle = L.circle([loc.lat, loc.lon], {
+      radius: radiusMeters,
+      color: "#4fd1c5",
+      weight: 1.5,
+      fillColor: "#4fd1c5",
+      fillOpacity: 0.15
+    }).addTo(map);
+
+    // 2. Query POIs
+    const elements = await fetchPOIs(loc.lat, loc.lon, radiusMeters, options);
+
+    // 3. Add to map
+    addPoisToMap(elements);
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Something went wrong. Try again.");
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.textContent = "Search Area";
+  }
+});
+
+// Initialize
+initMonetization();
