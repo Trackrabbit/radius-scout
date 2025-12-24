@@ -1,0 +1,234 @@
+:root {
+    --bg-main: #10131a;
+    --bg-panel: #181c24;
+    --bg-panel-alt: #1f2430;
+    --accent: #4fd1c5;
+    --accent-soft: rgba(79, 209, 197, 0.12);
+    --text-main: #f7fafc;
+    --text-muted: #a0aec0;
+    --border-subtle: #2d3748;
+    --danger: #f56565;
+    --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.4);
+  }
+  
+  * {
+    box-sizing: border-box;
+  }
+  
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    background: radial-gradient(circle at top, #20283a 0, #05070c 55%);
+    color: var(--text-main);
+  }
+  
+  #app {
+    display: grid;
+    grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+  }
+  
+  /* Header */
+  
+  header {
+    grid-column: 1 / -1;
+    padding: 1rem 1.5rem 0.5rem;
+  }
+  
+  header h1 {
+    margin: 0 0 0.25rem;
+    font-size: 1.75rem;
+    letter-spacing: 0.04em;
+  }
+  
+  header p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+  
+  /* Controls panel */
+  
+  #controls {
+    padding: 1rem 1.5rem 1.5rem;
+    background: linear-gradient(145deg, #11151f, #151a26);
+    border-right: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .form-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-row label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+  }
+  
+  #addressInput,
+  #radiusSelect {
+    padding: 0.55rem 0.65rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border-subtle);
+    background: #0c1018;
+    color: var(--text-main);
+    outline: none;
+    font-size: 0.95rem;
+    transition: border 0.15s ease, box-shadow 0.15s ease,
+      background 0.15s ease;
+  }
+  
+  #addressInput:focus,
+  #radiusSelect:focus {
+    border-color: var(--accent);
+    background: #121722;
+    box-shadow: 0 0 0 1px var(--accent-soft);
+  }
+  
+  .checkbox-row {
+    flex-wrap: wrap;
+    gap: 0.4rem 0.75rem;
+  }
+  
+  .checkbox-row span {
+    width: 100%;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+  
+  .checkbox-row label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    background: #111621;
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid var(--border-subtle);
+  }
+  
+  .checkbox-row input[type="checkbox"] {
+    accent-color: var(--accent);
+  }
+  
+  #searchBtn {
+    padding: 0.6rem 0.75rem;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(135deg, #38b2ac, #4fd1c5);
+    color: #0b1018;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-size: 0.85rem;
+    box-shadow: 0 10px 25px rgba(79, 209, 197, 0.5);
+    transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.15s ease;
+  }
+  
+  #searchBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(79, 209, 197, 0.65);
+  }
+  
+  #searchBtn:active {
+    transform: translateY(0);
+    box-shadow: 0 6px 16px rgba(79, 209, 197, 0.55);
+    opacity: 0.9;
+  }
+  
+  /* Summary & monetization */
+  
+  .summary {
+    margin-top: 0.25rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 0.6rem;
+    background: #101623;
+    border: 1px solid var(--border-subtle);
+  }
+  
+  .summary.hidden {
+    display: none;
+  }
+  
+  .summary h3 {
+    margin: 0 0 0.4rem;
+    font-size: 0.95rem;
+  }
+  
+  .summary ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.85rem;
+  }
+  
+  .summary li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.15rem 0;
+    color: var(--text-muted);
+  }
+  
+  .monetization {
+    margin-top: auto;
+    padding: 0.6rem 0.7rem;
+    border-radius: 0.6rem;
+    background: linear-gradient(135deg, rgba(79, 209, 197, 0.15), transparent);
+    border: 1px dashed rgba(79, 209, 197, 0.6);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  
+  /* Map */
+  
+  #mapSection {
+    position: relative;
+    min-height: 0;
+  }
+  
+  #map {
+    width: 100%;
+    height: 100vh;
+  }
+  
+  /* Leaflet popups in dark theme */
+  
+  .leaflet-popup-content-wrapper {
+    background: #111621;
+    color: var(--text-main);
+  }
+  
+  .leaflet-popup-tip {
+    background: #111621;
+  }
+  
+  /* Responsive */
+  
+  @media (max-width: 900px) {
+    #app {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto 1fr;
+    }
+  
+    #controls {
+      border-right: none;
+      border-top: 1px solid var(--border-subtle);
+    }
+  
+    #map {
+      height: 60vh;
+    }
+  }  
