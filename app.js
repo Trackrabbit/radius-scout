@@ -166,15 +166,27 @@ function addPoisToMap(elements) {
 
   elements.forEach(el => {
     const cat = categorizeElement(el);
+    console.log("POI raw tags:", el.tags);
+    console.log("POI category from categorizeElement:", cat);
+
     if (!cat) return;
 
     const lat = el.lat || (el.center && el.center.lat);
     const lon = el.lon || (el.center && el.center.lon);
     if (lat == null || lon == null) return;
 
-    counts[cat] += 1;
+    if (counts[cat] === undefined) {
+      console.warn("Unknown category key for counts:", cat);
+    } else {
+      counts[cat] += 1;
+    }
 
     const style = poiStyles[cat];
+    if (!style) {
+      console.warn("Missing poiStyles entry for category:", cat);
+      return;
+    }
+
     const icon = createPoiIcon(style.color);
 
     const name = el.tags.name || "(Unnamed)";
@@ -192,6 +204,7 @@ function addPoisToMap(elements) {
     L.marker([lat, lon], { icon }).bindPopup(popupHtml).addTo(poiLayer);
   });
 
+  console.log("Final counts:", counts);
   updateSummary(counts);
 }
 
@@ -293,5 +306,6 @@ searchBtn.addEventListener("click", async () => {
 
 // Initialize
 initMonetization();
+
 
 
