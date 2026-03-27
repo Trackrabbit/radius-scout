@@ -20,31 +20,35 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: radial-gradient(circle at top, #20283a 0, #05070c 55%);
   color: var(--text-main);
+  overflow: hidden; /* Prevents body scroll since map/app is full screen */
 }
 
 #app {
   display: grid;
   grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
   grid-template-rows: auto 1fr;
-  min-height: 100vh;
+  height: 100vh;
 }
 
 /* Header */
 header {
   grid-column: 1 / -1;
   padding: 1rem 1.5rem 0.5rem;
+  background: var(--bg-main);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 header h1 {
   margin: 0 0 0.25rem;
   font-size: 1.75rem;
   letter-spacing: 0.04em;
+  color: var(--accent);
 }
 
 header p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 /* Controls panel */
@@ -55,46 +59,44 @@ header p {
   box-shadow: var(--shadow-soft);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
+  overflow-y: auto; /* Allow scrolling if controls exceed height */
 }
 
 .form-row {
   display: flex;
   flex-direction: column;
-  margin-bottom: 0.5rem;
 }
 
 .form-row label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.4rem;
 }
 
 #addressInput,
 #radiusSelect {
-  padding: 0.55rem 0.65rem;
+  padding: 0.65rem;
   border-radius: 0.4rem;
   border: 1px solid var(--border-subtle);
   background: #0c1018;
   color: var(--text-main);
   outline: none;
-  font-size: 0.95rem;
-  transition: border 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
 }
 
 #addressInput:focus,
 #radiusSelect:focus {
   border-color: var(--accent);
-  background: #121722;
-  box-shadow: 0 0 0 1px var(--accent-soft);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
-/* NEW: Checkbox Grid Layout */
+/* Checkbox Grid */
 .checkbox-row span {
-  width: 100%;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -104,25 +106,25 @@ header p {
 
 .checkbox-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
 }
 
 .checkbox-grid label {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
+  gap: 0.5rem;
+  font-size: 0.8rem;
   background: #111621;
   border-radius: 6px;
-  padding: 0.4rem 0.5rem;
+  padding: 0.4rem 0.6rem;
   border: 1px solid var(--border-subtle);
-  margin-bottom: 0; /* Override previous margin */
   cursor: pointer;
-  transition: background 0.2s;
+  transition: 0.2s;
 }
 
 .checkbox-grid label:hover {
+  border-color: var(--text-muted);
   background: #1a202e;
 }
 
@@ -131,16 +133,17 @@ header p {
   margin: 0;
 }
 
-/* NEW: Button Grouping */
+/* Action Buttons */
 .button-group {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: row !important; /* Forces side-by-side layout */
+  gap: 0.75rem;
   margin-top: 0.5rem;
 }
 
 #searchBtn {
   flex: 2;
-  padding: 0.7rem;
+  padding: 0.75rem;
   border-radius: 0.4rem;
   border: none;
   background: linear-gradient(135deg, #38b2ac, #4fd1c5);
@@ -149,13 +152,13 @@ header p {
   text-transform: uppercase;
   cursor: pointer;
   font-size: 0.8rem;
-  box-shadow: 0 4px 15px rgba(79, 209, 197, 0.3);
-  transition: transform 0.1s, opacity 0.15s;
+  box-shadow: 0 4px 12px rgba(79, 209, 197, 0.3);
+  transition: transform 0.1s, opacity 0.2s;
 }
 
 #clearBtn {
   flex: 1;
-  padding: 0.7rem;
+  padding: 0.75rem;
   border-radius: 0.4rem;
   border: 1px solid var(--border-subtle);
   background: #1a202e;
@@ -164,17 +167,23 @@ header p {
   text-transform: uppercase;
   cursor: pointer;
   font-size: 0.75rem;
+  transition: all 0.2s;
 }
 
-#searchBtn:hover, #clearBtn:hover {
-  opacity: 0.9;
+#searchBtn:hover {
   transform: translateY(-1px);
+  opacity: 0.9;
 }
 
-/* Updated Summary & Grid */
+#clearBtn:hover {
+  background: #2d3748;
+  color: var(--text-main);
+  border-color: var(--text-muted);
+}
+
+/* Summary Panel */
 .summary {
-  margin-top: 0.5rem;
-  padding: 0.8rem;
+  padding: 1rem;
   border-radius: 0.6rem;
   background: #101623;
   border: 1px solid var(--border-subtle);
@@ -183,70 +192,76 @@ header p {
 .summary.hidden { display: none; }
 
 .summary h3 {
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.75rem;
   font-size: 0.85rem;
   text-transform: uppercase;
   color: var(--accent);
+  letter-spacing: 0.05em;
 }
 
 .poi-summary-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .summary-item {
   font-size: 0.75rem;
   color: var(--text-muted);
   background: #161c27;
-  padding: 0.3rem 0.5rem;
+  padding: 0.4rem 0.6rem;
   border-radius: 4px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .summary-item span {
-  color: var(--text-main);
+  color: var(--accent);
   font-weight: bold;
 }
 
 .monetization {
   margin-top: auto;
-  padding: 0.6rem 0.7rem;
+  padding: 0.8rem;
   border-radius: 0.6rem;
   background: linear-gradient(135deg, rgba(79, 209, 197, 0.05), transparent);
   border: 1px dashed rgba(79, 209, 197, 0.3);
   font-size: 0.75rem;
   color: var(--text-muted);
+  line-height: 1.4;
 }
 
-/* Map */
+/* Map Area */
 #mapSection {
   position: relative;
-  min-height: 0;
+  background: #05070c;
 }
 
 #map {
   width: 100%;
-  height: 100vh;
+  height: 100%;
 }
 
-/* Leaflet popups in dark theme */
+/* Leaflet Theming */
 .leaflet-popup-content-wrapper {
   background: #111621;
   color: var(--text-main);
   border: 1px solid var(--border-subtle);
+  border-radius: 8px;
 }
 
 .leaflet-popup-tip {
   background: #111621;
 }
 
-/* Responsive */
+/* Responsive Overrides */
 @media (max-width: 900px) {
   #app {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto 1fr;
+    height: auto;
+    overflow-y: auto;
   }
 
   #controls {
