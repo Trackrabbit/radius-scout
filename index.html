@@ -5,7 +5,6 @@
   <title>RadiusScout</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Leaflet CSS -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -19,7 +18,7 @@
   <div id="app">
     <header>
       <h1>RadiusScout</h1>
-      <p>Find churches, schools, parks, and daycares around any address.</p>
+      <p>Find community infrastructure and amenities around any address.</p>
     </header>
 
     <section id="controls">
@@ -44,22 +43,17 @@
 
       <div class="form-row checkbox-row">
         <span>POI Types:</span>
-        <label>
-          <input type="checkbox" id="poiWorship" checked />
-          Churches / Worship
-        </label>
-        <label>
-          <input type="checkbox" id="poiSchools" checked />
-          Schools
-        </label>
-        <label>
-          <input type="checkbox" id="poiParks" checked />
-          Parks
-        </label>
-        <label>
-          <input type="checkbox" id="poiDaycare" checked />
-          Daycares
-        </label>
+        <div class="checkbox-grid">
+          <label><input type="checkbox" id="poiWorship" checked /> Worship</label>
+          <label><input type="checkbox" id="poiSchools" checked /> Schools</label>
+          <label><input type="checkbox" id="poiColleges" checked /> Colleges</label>
+          <label><input type="checkbox" id="poiKindergarten" checked /> Kindergartens</label>
+          <label><input type="checkbox" id="poiDaycare" checked /> Daycares</label>
+          <label><input type="checkbox" id="poiLibraries" checked /> Libraries</label>
+          <label><input type="checkbox" id="poiParks" checked /> Parks</label>
+          <label><input type="checkbox" id="poiPlaygrounds" checked /> Playgrounds</label>
+          <label><input type="checkbox" id="poiPools" checked /> Pools</label>
+        </div>
       </div>
 
       <div class="form-row">
@@ -68,16 +62,20 @@
 
       <div id="summaryPopup" class="summary hidden">
         <h3>POI Summary</h3>
-        <ul>
-          <li>Churches / Worship: <span id="countWorship">0</span></li>
-          <li>Schools: <span id="countSchools">0</span></li>
-          <li>Parks: <span id="countParks">0</span></li>
-          <li>Daycares: <span id="countDaycare">0</span></li>
-        </ul>
+        <div class="poi-summary-grid">
+          <div class="summary-item">Worship: <span id="countWorship">0</span></div>
+          <div class="summary-item">Schools: <span id="countSchools">0</span></div>
+          <div class="summary-item">Colleges: <span id="countColleges">0</span></div>
+          <div class="summary-item">Kindergartens: <span id="countKindergarten">0</span></div>
+          <div class="summary-item">Daycares: <span id="countDaycare">0</span></div>
+          <div class="summary-item">Libraries: <span id="countLibraries">0</span></div>
+          <div class="summary-item">Parks: <span id="countParks">0</span></div>
+          <div class="summary-item">Playgrounds: <span id="countPlaygrounds">0</span></div>
+          <div class="summary-item">Pools: <span id="countPools">0</span></div>
+        </div>
       </div>
 
       <div id="monetizationStub" class="monetization">
-        <!-- Monetization stub: replace this with ads, payment buttons, etc. -->
         <p>
           Premium feature space: upgrade to unlock advanced analytics, saved
           searches, and PDF reports.
@@ -90,7 +88,6 @@
     </section>
   </div>
 
-  <!-- Leaflet JS -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -100,4 +97,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
