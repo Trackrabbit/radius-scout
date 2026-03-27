@@ -11,11 +11,17 @@ let radiusCircle = null;
 let poiLayer = L.layerGroup().addTo(map);
 let currentCenter = null;
 
+// Expanded Styles with new categories
 const poiStyles = {
   worship: { color: "#f56565", label: "Place of Worship" },
   school: { color: "#ecc94b", label: "School" },
   park: { color: "#48bb78", label: "Park" },
-  daycare: { color: "#9f7aea", label: "Daycare" }
+  daycare: { color: "#9f7aea", label: "Daycare" },
+  kindergarten: { color: "#ed8936", label: "Kindergarten" },
+  pool: { color: "#4299e1", label: "Pool" },
+  library: { color: "#667eea", label: "Library" },
+  college: { color: "#ed64a6", label: "College/Uni" },
+  playground: { color: "#38b2ac", label: "Playground" }
 };
 
 function createPoiIcon(color) {
@@ -27,7 +33,6 @@ function createPoiIcon(color) {
   });
 }
 
-// Math: Fast Box Boundaries
 function getBoundingBox(lat, lon, radiusMeters) {
   const latOffset = radiusMeters / 111320; 
   const lonOffset = radiusMeters / (111320 * Math.cos(lat * (Math.PI / 180)));
@@ -37,7 +42,6 @@ function getBoundingBox(lat, lon, radiusMeters) {
   };
 }
 
-// Geocoding
 async function geocodeAddress(address) {
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", address);
@@ -47,15 +51,12 @@ async function geocodeAddress(address) {
   const res = await fetch(url.toString(), {
     headers: { "User-Agent": "MapSearchTool/1.0" }
   });
-
   if (!res.ok) throw new Error("Geocoding failed.");
   const data = await res.json();
   if (!data.length) throw new Error("Address not found.");
-
   return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), label: data[0].display_name };
 }
 
-// Overpass API with FAILOVER (Multi-Server)
 async function fetchFromOverpass(lat, lon, radiusMeters, options) {
   const box = getBoundingBox(lat, lon, radiusMeters);
   const bboxStr = `${box.south},${box.west},${box.north},${box.east}`;
@@ -64,37 +65,29 @@ async function fetchFromOverpass(lat, lon, radiusMeters, options) {
   if (options.worship) filters.push(`nwr["amenity"="place_of_worship"](${bboxStr});`);
   if (options.schools) filters.push(`nwr["amenity"="school"](${bboxStr});`);
   if (options.parks)   filters.push(`nwr["leisure"="park"](${bboxStr});`);
-  if (options.daycare) filters.push(`nwr["amenity"~"childcare|kindergarten"](${bboxStr});`);
+  if (options.daycare) filters.push(`nwr["amenity"="childcare"](${bboxStr});`);
+  if (options.kindergarten) filters.push(`nwr["amenity"="kindergarten"](${bboxStr});`);
+  if (options.pools)   filters.push(`nwr["leisure"="swimming_pool"](${bboxStr});`);
+  if (options.libraries) filters.push(`nwr["amenity"="library"](${bboxStr});`);
+  if (options.colleges)  filters.push(`nwr["amenity"~"college|university"](${bboxStr});`);
+  if (options.playgrounds) filters.push(`nwr["leisure"="playground"](${bboxStr});`);
 
   if (!filters.length) return [];
 
   const query = `[out:json][timeout:15];(${filters.join("")});out center;`;
   const encodedQuery = "data=" + encodeURIComponent(query);
-
-  const servers = [
-    "https://overpass.kumi.systems/api/interpreter",
-    "https://lz4.overpass-api.de/api/interpreter",
-    "https://z.overpass-api.de/api/interpreter"
-  ];
+  const servers = ["https://overpass.kumi.systems/api/interpreter", "https://lz4.overpass-api.de/api/interpreter"];
 
   for (const url of servers) {
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encodedQuery
-      });
-
-      const contentType = res.headers.get("content-type");
-      if (res.ok && contentType && contentType.includes("application/json")) {
+      const res = await fetch(url, { method: "POST", body: encodedQuery });
+      if (res.ok) {
         const data = await res.json();
         return data.elements || [];
       }
-    } catch (e) {
-      console.warn(`Server ${url} failed, trying next...`);
-    }
+    } catch (e) { console.warn(`Server ${url} failed.`); }
   }
-  throw new Error("All map data servers are busy. Please try again in 10 seconds.");
+  throw new Error("Data servers busy.");
 }
 
 function categorizeElement(el) {
@@ -103,16 +96,18 @@ function categorizeElement(el) {
   if (t.amenity === "place_of_worship") return "worship";
   if (t.amenity === "school") return "school";
   if (t.leisure === "park") return "park";
-  if (t.amenity === "childcare" || t.amenity === "kindergarten") return "daycare";
+  if (t.amenity === "childcare") return "daycare";
+  if (t.amenity === "kindergarten") return "kindergarten";
+  if (t.leisure === "swimming_pool") return "pool";
+  if (t.amenity === "library") return "library";
+  if (t.amenity === "college" || t.amenity === "university") return "college";
+  if (t.leisure === "playground") return "playground";
   return null;
 }
 
-// The UI and Zoom logic
 function addPoisToMap(elements, radiusMeters) {
   poiLayer.clearLayers();
-  const counts = { worship: 0, school: 0, park: 0, daycare: 0 };
-  
-  // 1. Initialize bounds
+  const counts = { worship: 0, school: 0, park: 0, daycare: 0, kindergarten: 0, pool: 0, library: 0, college: 0, playground: 0 };
   const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
   let hasPois = false;
 
@@ -124,7 +119,6 @@ function addPoisToMap(elements, radiusMeters) {
     const lon = el.lon || (el.center && el.center.lon);
     if (!lat || !lon) return;
 
-    // Perfect Circle Filter
     const dist = map.distance([lat, lon], [currentCenter.lat, currentCenter.lon]);
     if (dist > radiusMeters) return; 
 
@@ -136,84 +130,65 @@ function addPoisToMap(elements, radiusMeters) {
      .bindPopup(`<strong>${style.label}</strong><br>${el.tags.name || "Unnamed"}`)
      .addTo(poiLayer);
     
-    // Extend bounds for this POI
     bounds.extend([lat, lon]);
   });
 
   updateSummary(counts);
 
-  // 2. THE ZOOM LOGIC:
-  // We use a small timeout to let the Leaflet engine "catch up."
   setTimeout(() => {
-    map.invalidateSize(); // Refreshes the map container's math
-
+    map.invalidateSize();
     if (!hasPois) {
-      // IF NO POIS: Explicitly zoom to the center point at a close zoom level (e.g., 16)
-      console.log("No POIs found. Zooming to center.");
-      map.setView([currentCenter.lat, currentCenter.lon], 16, { animate: true, duration: 1.5 });
+      map.setView([currentCenter.lat, currentCenter.lon], 16, { animate: true });
     } else {
-      // IF POIS: Zoom to fit all found items
-      console.log("POIs found. Zooming to fit bounds.");
-      map.fitBounds(bounds, { 
-        padding: [50, 50], 
-        maxZoom: 16, 
-        animate: true,
-        duration: 1.5 
-      });
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true });
     }
   }, 100); 
 }
 
 function updateSummary(counts) {
-  const mapping = { worship: "countWorship", school: "countSchools", park: "countParks", daycare: "countDaycare" };
+  // Matches IDs in your HTML (e.g., <span id="countKindergarten">0</span>)
+  const mapping = { 
+    worship: "countWorship", school: "countSchools", park: "countParks", 
+    daycare: "countDaycare", kindergarten: "countKindergarten",
+    pool: "countPools", library: "countLibraries", college: "countColleges",
+    playground: "countPlaygrounds"
+  };
   Object.keys(mapping).forEach(key => {
     const el = document.getElementById(mapping[key]);
     if (el) el.textContent = counts[key];
   });
-  document.getElementById("summaryPopup")?.classList.remove("hidden");
 }
-
-const addressInput = document.getElementById("addressInput");
-const radiusSelect = document.getElementById("radiusSelect");
-const searchBtn = document.getElementById("searchBtn");
 
 searchBtn.addEventListener("click", async () => {
   const address = addressInput.value.trim();
-  if (!address) return alert("Please enter an address.");
-
   const radiusMeters = parseInt(radiusSelect.value, 10);
   const options = {
     worship: document.getElementById("poiWorship")?.checked,
     schools: document.getElementById("poiSchools")?.checked,
     parks: document.getElementById("poiParks")?.checked,
-    daycare: document.getElementById("poiDaycare")?.checked
+    daycare: document.getElementById("poiDaycare")?.checked,
+    kindergarten: document.getElementById("poiKindergarten")?.checked,
+    pools: document.getElementById("poiPools")?.checked,
+    libraries: document.getElementById("poiLibraries")?.checked,
+    colleges: document.getElementById("poiColleges")?.checked,
+    playgrounds: document.getElementById("poiPlaygrounds")?.checked
   };
 
   searchBtn.disabled = true;
-  searchBtn.textContent = "Searching...";
-
   try {
     const loc = await geocodeAddress(address);
     currentCenter = loc; 
-
     if (centerMarker) map.removeLayer(centerMarker);
-    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map).bindPopup("<b>Center:</b> " + loc.label);
+    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map);
 
     if (radiusCircle) map.removeLayer(radiusCircle);
-    radiusCircle = L.circle([loc.lat, loc.lon], { 
-        radius: radiusMeters, 
-        color: "#4fd1c5", 
-        weight: 2,
-        fillOpacity: 0.1 
-    }).addTo(map);
+    radiusCircle = L.circle([loc.lat, loc.lon], { radius: radiusMeters, color: "#4fd1c5", fillOpacity: 0.1 }).addTo(map);
 
     const results = await fetchFromOverpass(loc.lat, loc.lon, radiusMeters, options);
     addPoisToMap(results, radiusMeters);
-
   } catch (err) {
     alert(err.message);
   } finally {
     searchBtn.disabled = false;
-    searchBtn.textContent = "Search Area";
   }
 });
