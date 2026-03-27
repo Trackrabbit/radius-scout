@@ -10,7 +10,6 @@ let centerMarker = null;
 let radiusCircle = null;
 let poiLayer = L.layerGroup().addTo(map);
 
-// Simple color scheme for POI icons
 const poiStyles = {
   worship: { color: "#f56565", label: "Place of Worship" },
   school: { color: "#ecc94b", label: "School" },
@@ -35,7 +34,6 @@ function createPoiIcon(color) {
 }
 
 // ===== Geocoding (Nominatim) =====
-// Nominatim usage policy: add a proper User-Agent / Referer in production. [web:16]
 async function geocodeAddress(address) {
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", address);
@@ -44,7 +42,9 @@ async function geocodeAddress(address) {
 
   const res = await fetch(url.toString(), {
     headers: {
-      "Accept-Language": "en"
+      "Accept-Language": "en",
+      // Nominatim REQUIRES a User-Agent. Replace with your app name.
+      "User-Agent": "MyPOIApp/1.0 (contact@example.com)" 
     }
   });
 
@@ -64,61 +64,40 @@ async function geocodeAddress(address) {
 }
 
 // ===== Overpass POI query =====
-// Uses Overpass QL to query nodes/ways/relations within an around-radius. [web:24][web:28]
 function buildOverpassQuery(lat, lon, radiusMeters, options) {
   const blocks = [];
 
-  if (options.worship) {
-    blocks.push(`
-      nwr["amenity"="place_of_worship"](around:${radiusMeters},${lat},${lon});
-    `);
-  }
-  if (options.schools) {
-    blocks.push(`
-      nwr["amenity"="school"](around:${radiusMeters},${lat},${lon});
-    `);
-  }
-  if (options.parks) {
-    blocks.push(`
-      nwr["leisure"="park"](around:${radiusMeters},${lat},${lon});
-    `);
-  }
-  if (options.daycare) {
-    blocks.push(`
-      nwr["amenity"="childcare"](around:${radiusMeters},${lat},${lon});
-    `);
-  }
+  if (options.worship) blocks.push(`nwr["amenity"="place_of_worship"](around:${radiusMeters},${lat},${lon});`);
+  if (options.schools) blocks.push(`nwr["amenity"="school"](around:${radiusMeters},${lat},${lon});`);
+  if (options.parks)   blocks.push(`nwr["leisure"="park"](around:${radiusMeters},${lat},${lon});`);
+  if (options.daycare) blocks.push(`nwr["amenity"~"childcare|kindergarten"](around:${radiusMeters},${lat},${lon});`);
 
-  if (blocks.length === 0) {
-    return null;
-  }
+  if (blocks.length === 0) return null;
 
   const body = blocks.join("\n");
-
-  const query = `
-    [out:json][timeout:25];
-    (
-      ${body}
-    );
-    out center;
-  `;
-
-  return query;
+  return `[out:json][timeout:25];(${body});out center;`;
 }
 
-async function fetchCenterPOI(lat, lon, options) {
-  const tinyRadius = 5; // meters
-  const q = buildOverpassQuery(lat, lon, tinyRadius, options);
-  if (!q) return [];
+async function fetchFromOverpass(query) {
+  if (!query) return [];
 
-  const url = "https://overpass.kumi.systems/api/interpreter"; // or your chosen instance
+  // You can also use https://overpass-api.de/api/interpreter if kumi is down
+  const url = "https://overpass.kumi.systems/api/interpreter";
+  
   const res = await fetch(url, {
     method: "POST",
-    body: q
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    // The query MUST be prefixed with "data=" and URL encoded
+    body: "data=" + encodeURIComponent(query)
   });
 
-  if (!res.ok) {
-    return [];
+  const contentType = res.headers.get("content-type");
+  if (!res.ok || !contentType || !contentType.includes("application/json")) {
+    const errorText = await res.text();
+    console.error("Overpass Error Response:", errorText);
+    throw new Error("Overpass API error. The server might be rate-limiting or down.");
   }
 
   const data = await res.json();
@@ -127,104 +106,61 @@ async function fetchCenterPOI(lat, lon, options) {
 
 async function fetchPOIs(lat, lon, radiusMeters, options) {
   const q = buildOverpassQuery(lat, lon, radiusMeters, options);
-  if (!q) return [];
+  return await fetchFromOverpass(q);
+}
 
-  const url = "https://overpass.kumi.systems/api/interpreter";
-  const res = await fetch(url, {
-    method: "POST",
-    body: q
-  });
-
-  if (!res.ok) {
-    throw new Error("Overpass API request failed");
-  }
-
-  const data = await res.json();
-  return data.elements || [];
+async function fetchCenterPOI(lat, lon, options) {
+  const q = buildOverpassQuery(lat, lon, 10, options); // 10m tolerance for center
+  return await fetchFromOverpass(q);
 }
 
 function categorizeElement(el) {
   if (!el.tags) return null;
-
   if (el.tags.amenity === "place_of_worship") return "worship";
   if (el.tags.amenity === "school") return "school";
   if (el.tags.leisure === "park") return "park";
-  if (el.tags.amenity === "childcare") return "daycare";
-
+  if (el.tags.amenity === "childcare" || el.tags.amenity === "kindergarten") return "daycare";
   return null;
 }
 
 function addPoisToMap(elements) {
   poiLayer.clearLayers();
-
-  const counts = {
-    worship: 0,
-    school: 0,
-    park: 0,
-    daycare: 0
-  };
+  const counts = { worship: 0, school: 0, park: 0, daycare: 0 };
 
   elements.forEach(el => {
     const cat = categorizeElement(el);
-    console.log("POI raw tags:", el.tags);
-    console.log("POI category from categorizeElement:", cat);
-
     if (!cat) return;
 
     const lat = el.lat || (el.center && el.center.lat);
     const lon = el.lon || (el.center && el.center.lon);
     if (lat == null || lon == null) return;
 
-    if (counts[cat] === undefined) {
-      console.warn("Unknown category key for counts:", cat);
-    } else {
-      counts[cat] += 1;
-    }
+    counts[cat]++;
 
     const style = poiStyles[cat];
-    if (!style) {
-      console.warn("Missing poiStyles entry for category:", cat);
-      return;
-    }
-
     const icon = createPoiIcon(style.color);
-
     const name = el.tags.name || "(Unnamed)";
-    const details = [];
-    if (el.tags.denomination) details.push(`Denomination: ${el.tags.denomination}`);
-    if (el.tags.religion) details.push(`Religion: ${el.tags.religion}`);
-    if (el.tags.operator) details.push(`Operator: ${el.tags.operator}`);
-
+    
     const popupHtml = `
       <strong>${style.label}</strong><br/>
-      ${name}<br/>
-      <small>${details.join("<br/>")}</small>
+      ${name}
     `;
 
     L.marker([lat, lon], { icon }).bindPopup(popupHtml).addTo(poiLayer);
   });
 
-  console.log("Final counts:", counts);
   updateSummary(counts);
 }
 
 function updateSummary(counts) {
-  document.getElementById("countWorship").textContent = counts.worship;
-  document.getElementById("countSchools").textContent = counts.school;
-  document.getElementById("countParks").textContent = counts.park;
-  document.getElementById("countDaycare").textContent = counts.daycare;
-
+  const ids = { worship: "countWorship", school: "countSchools", park: "countParks", daycare: "countDaycare" };
+  for (const [key, id] of Object.entries(ids)) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = counts[key];
+  }
+  
   const summary = document.getElementById("summaryPopup");
-  summary.classList.remove("hidden");
-}
-
-// ===== Monetization stub =====
-function initMonetization() {
-  // Placeholder: call ad network, show paywall, etc.
-  // Example:
-  //   loadAds();
-  //   if (!userIsPaid) limit radius or results.
-  console.log("Monetization stub initialized.");
+  if (summary) summary.classList.remove("hidden");
 }
 
 // ===== Main flow =====
@@ -234,78 +170,53 @@ const searchBtn = document.getElementById("searchBtn");
 
 searchBtn.addEventListener("click", async () => {
   const address = addressInput.value.trim();
-  if (!address) {
-    alert("Please enter an address.");
-    return;
-  }
+  if (!address) return alert("Please enter an address.");
 
   const radiusMeters = parseInt(radiusSelect.value, 10);
-
   const options = {
-    worship: document.getElementById("poiWorship").checked,
-    schools: document.getElementById("poiSchools").checked,
-    parks: document.getElementById("poiParks").checked,
-    daycare: document.getElementById("poiDaycare").checked
+    worship: document.getElementById("poiWorship")?.checked,
+    schools: document.getElementById("poiSchools")?.checked,
+    parks: document.getElementById("poiParks")?.checked,
+    daycare: document.getElementById("poiDaycare")?.checked
   };
 
   searchBtn.disabled = true;
   searchBtn.textContent = "Searching...";
 
   try {
-    // 1. Geocode
     const loc = await geocodeAddress(address);
-
-    // Center map
     map.setView([loc.lat, loc.lon], 15);
 
-    if (centerMarker) {
-      map.removeLayer(centerMarker);
-    }
-    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map);
-    centerMarker.bindPopup(`<strong>Center</strong><br/>${loc.label}`).openPopup();
+    if (centerMarker) map.removeLayer(centerMarker);
+    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map)
+      .bindPopup(`<strong>Center</strong><br/>${loc.label}`).openPopup();
 
-    // Draw radius
-    if (radiusCircle) {
-      map.removeLayer(radiusCircle);
-    }
+    if (radiusCircle) map.removeLayer(radiusCircle);
     radiusCircle = L.circle([loc.lat, loc.lon], {
       radius: radiusMeters,
       color: "#4fd1c5",
-      weight: 1.5,
-      fillColor: "#4fd1c5",
       fillOpacity: 0.15
     }).addTo(map);
 
-  // 2. Query POIs in radius
-  const elements = await fetchPOIs(loc.lat, loc.lon, radiusMeters, options);
-  
-  // 2b. Query POI exactly at the center (in case the address is itself a school, church, etc.)
-  const centerElements = await fetchCenterPOI(loc.lat, loc.lon, options);
-  
-  // Merge and remove duplicates by OSM id
-  const all = [...elements, ...centerElements];
-  const seen = new Set();
-  const unique = all.filter(el => {
-    const key = `${el.type}/${el.id}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  
-  // 3. Add to map
-  addPoisToMap(unique);
+    const [radiusResults, centerResults] = await Promise.all([
+      fetchPOIs(loc.lat, loc.lon, radiusMeters, options),
+      fetchCenterPOI(loc.lat, loc.lon, options)
+    ]);
+
+    const all = [...radiusResults, ...centerResults];
+    const seen = new Set();
+    const unique = all.filter(el => {
+      const key = `${el.type}/${el.id}`;
+      return seen.has(key) ? false : seen.add(key);
+    });
+
+    addPoisToMap(unique);
 
   } catch (err) {
     console.error(err);
-    alert(err.message || "Something went wrong. Try again.");
+    alert(err.message);
   } finally {
     searchBtn.disabled = false;
     searchBtn.textContent = "Search Area";
   }
 });
-
-// Initialize
-initMonetization();
-
-
-
