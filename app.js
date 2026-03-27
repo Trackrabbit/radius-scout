@@ -9,6 +9,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 let centerMarker = null;
 let radiusCircle = null;
 let poiLayer = L.layerGroup().addTo(map);
+let currentCenter = null; // Store the current search center
 
 const poiStyles = {
   worship: { color: "#f56565", label: "Place of Worship" },
@@ -17,7 +18,6 @@ const poiStyles = {
   daycare: { color: "#9f7aea", label: "Daycare" }
 };
 
-// Helper: Custom Marker Icon
 function createPoiIcon(color) {
   return L.divIcon({
     className: "custom-poi-icon",
@@ -27,20 +27,17 @@ function createPoiIcon(color) {
   });
 }
 
-// ===== Math: Bounding Box Calculation (Fastest Search) =====
+// Math: Fast Box Boundaries
 function getBoundingBox(lat, lon, radiusMeters) {
   const latOffset = radiusMeters / 111320; 
   const lonOffset = radiusMeters / (111320 * Math.cos(lat * (Math.PI / 180)));
-
   return {
-    south: lat - latOffset,
-    west: lon - lonOffset,
-    north: lat + latOffset,
-    east: lon + lonOffset
+    south: lat - latOffset, west: lon - lonOffset,
+    north: lat + latOffset, east: lon + lonOffset
   };
 }
 
-// ===== Geocoding (Nominatim) =====
+// Geocoding
 async function geocodeAddress(address) {
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", address);
@@ -48,24 +45,17 @@ async function geocodeAddress(address) {
   url.searchParams.set("limit", "1");
 
   const res = await fetch(url.toString(), {
-    headers: {
-      "Accept-Language": "en",
-      "User-Agent": "MapSearchTool/1.0 (contact@example.com)"
-    }
+    headers: { "User-Agent": "MapSearchTool/1.0" }
   });
 
-  if (!res.ok) throw new Error("Geocoding failed. Check your connection.");
+  if (!res.ok) throw new Error("Geocoding failed.");
   const data = await res.json();
   if (!data.length) throw new Error("Address not found.");
 
-  return {
-    lat: parseFloat(data[0].lat),
-    lon: parseFloat(data[0].lon),
-    label: data[0].display_name
-  };
+  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), label: data[0].display_name };
 }
 
-// ===== Overpass Query Logic =====
+// Overpass API
 async function fetchFromOverpass(lat, lon, radiusMeters, options) {
   const box = getBoundingBox(lat, lon, radiusMeters);
   const bboxStr = `${box.south},${box.west},${box.north},${box.east}`;
@@ -79,24 +69,17 @@ async function fetchFromOverpass(lat, lon, radiusMeters, options) {
   if (!filters.length) return [];
 
   const query = `[out:json][timeout:15];(${filters.join("")});out center;`;
-  const url = "https://overpass-api.de/api/interpreter"; // Using main fast server
-
-  const res = await fetch(url, {
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: "data=" + encodeURIComponent(query)
   });
 
-  const contentType = res.headers.get("content-type");
-  if (!res.ok || !contentType || !contentType.includes("application/json")) {
-    throw new Error("Overpass server busy. Please try again in a few seconds.");
-  }
-
+  if (!res.ok) throw new Error("Overpass server busy.");
   const data = await res.json();
   return data.elements || [];
 }
 
-// ===== UI: Map Rendering =====
 function categorizeElement(el) {
   const t = el.tags;
   if (!t) return null;
@@ -107,7 +90,8 @@ function categorizeElement(el) {
   return null;
 }
 
-function addPoisToMap(elements) {
+// ADDED: The "Perfect Circle" logic is inside here
+function addPoisToMap(elements, radiusMeters) {
   poiLayer.clearLayers();
   const counts = { worship: 0, school: 0, park: 0, daycare: 0 };
   const markers = [];
@@ -120,21 +104,26 @@ function addPoisToMap(elements) {
     const lon = el.lon || (el.center && el.center.lon);
     if (!lat || !lon) return;
 
+    // --- CIRCLE FILTER ---
+    // Calculate distance from center to POI in meters
+    const distanceToCenter = map.distance([lat, lon], [currentCenter.lat, currentCenter.lon]);
+    
+    // If it's outside the circle (the "corners" of our box), skip it!
+    if (distanceToCenter > radiusMeters) return; 
+
     counts[cat]++;
     const style = poiStyles[cat];
-    const marker = L.marker([lat, lon], { icon: createPoiIcon(style.color) })
-                    .bindPopup(`<strong>${style.label}</strong><br>${el.tags.name || "Unnamed"}`);
+    L.marker([lat, lon], { icon: createPoiIcon(style.color) })
+     .bindPopup(`<strong>${style.label}</strong><br>${el.tags.name || "Unnamed"}`)
+     .addTo(poiLayer);
     
-    marker.addTo(poiLayer);
     markers.push([lat, lon]);
   });
 
   updateSummary(counts);
 
-  // Auto-Zoom: Fit all markers on screen
   if (markers.length > 0) {
     const bounds = L.latLngBounds(markers);
-    // Add the center point to the bounds so it's included
     if (centerMarker) bounds.extend(centerMarker.getLatLng());
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
   }
@@ -149,7 +138,6 @@ function updateSummary(counts) {
   document.getElementById("summaryPopup")?.classList.remove("hidden");
 }
 
-// ===== Execution Flow =====
 const addressInput = document.getElementById("addressInput");
 const radiusSelect = document.getElementById("radiusSelect");
 const searchBtn = document.getElementById("searchBtn");
@@ -171,17 +159,16 @@ searchBtn.addEventListener("click", async () => {
 
   try {
     const loc = await geocodeAddress(address);
-    
-    // Update Center UI
+    currentCenter = loc; // Store for the distance check
+
     if (centerMarker) map.removeLayer(centerMarker);
-    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map).bindPopup("Searching from here...");
+    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map).bindPopup("Search Center");
 
     if (radiusCircle) map.removeLayer(radiusCircle);
     radiusCircle = L.circle([loc.lat, loc.lon], { radius: radiusMeters, color: "#4fd1c5", fillOpacity: 0.1 }).addTo(map);
 
-    // Fetch and Display
     const results = await fetchFromOverpass(loc.lat, loc.lon, radiusMeters, options);
-    addPoisToMap(results);
+    addPoisToMap(results, radiusMeters);
 
   } catch (err) {
     alert(err.message);
