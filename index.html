@@ -58,7 +58,7 @@
 
       <div class="form-row button-group">
         <button id="searchBtn">Search Area</button>
-        <button id="clearBtn" type="button">Clear Map</button>
+        <button id="clearBtn" class="secondary-btn">Clear Map</button>
       </div>
 
       <div id="summaryPopup" class="summary hidden">
@@ -68,4 +68,33 @@
           <div class="summary-item">Schools: <span id="countSchools">0</span></div>
           <div class="summary-item">Colleges: <span id="countColleges">0</span></div>
           <div class="summary-item">Kindergartens: <span id="countKindergarten">0</span></div>
-          <div class="summary-item">Daycares: <span id="countDaycare">
+          <div class="summary-item">Daycares: <span id="countDaycare">0</span></div>
+          <div class="summary-item">Libraries: <span id="countLibraries">0</span></div>
+          <div class="summary-item">Parks: <span id="countParks">0</span></div>
+          <div class="summary-item">Playgrounds: <span id="countPlaygrounds">0</span></div>
+          <div class="summary-item">Pools: <span id="countPools">0</span></div>
+        </div>
+      </div>
+
+      <div id="monetizationStub" class="monetization">
+        <p>
+          Premium feature space: upgrade to unlock advanced analytics, saved
+          searches, and PDF reports.
+        </p>
+      </div>
+    </section>
+
+    <section id="mapSection">
+      <div id="map"></div>
+    </section>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script src="app.js"></script>
+</body>
+</html>
