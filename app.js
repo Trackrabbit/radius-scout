@@ -112,8 +112,9 @@ function addPoisToMap(elements, radiusMeters) {
   poiLayer.clearLayers();
   const counts = { worship: 0, school: 0, park: 0, daycare: 0 };
   
-  // 1. Initialize bounds with the center point so we ALWAYS have a zoom target
+  // 1. Initialize bounds
   const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
+  let hasPois = false;
 
   elements.forEach(el => {
     const cat = categorizeElement(el);
@@ -127,6 +128,7 @@ function addPoisToMap(elements, radiusMeters) {
     const dist = map.distance([lat, lon], [currentCenter.lat, currentCenter.lon]);
     if (dist > radiusMeters) return; 
 
+    hasPois = true;
     counts[cat]++;
     const style = poiStyles[cat];
     
@@ -134,30 +136,32 @@ function addPoisToMap(elements, radiusMeters) {
      .bindPopup(`<strong>${style.label}</strong><br>${el.tags.name || "Unnamed"}`)
      .addTo(poiLayer);
     
-    // Extend bounds to include this marker
+    // Extend bounds for this POI
     bounds.extend([lat, lon]);
   });
 
   updateSummary(counts);
 
-  // 2. FORCE ZOOM LOGIC
-  // We use a tiny timeout (50ms) to ensure the DOM has updated before zooming
+  // 2. THE ZOOM LOGIC:
+  // We use a small timeout to let the Leaflet engine "catch up."
   setTimeout(() => {
-    map.invalidateSize(); // Refreshes the map container math
-    
-    // If we only have the center point, use setView to go close
-    if (counts.worship + counts.school + counts.park + counts.daycare === 0) {
-      map.setView([currentCenter.lat, currentCenter.lon], 15, { animate: true });
+    map.invalidateSize(); // Refreshes the map container's math
+
+    if (!hasPois) {
+      // IF NO POIS: Explicitly zoom to the center point at a close zoom level (e.g., 16)
+      console.log("No POIs found. Zooming to center.");
+      map.setView([currentCenter.lat, currentCenter.lon], 16, { animate: true, duration: 1.5 });
     } else {
-      // Otherwise, zoom to fit all markers
+      // IF POIS: Zoom to fit all found items
+      console.log("POIs found. Zooming to fit bounds.");
       map.fitBounds(bounds, { 
         padding: [50, 50], 
         maxZoom: 16, 
         animate: true,
-        duration: 1 // 1 second animation
+        duration: 1.5 
       });
     }
-  }, 50); 
+  }, 100); 
 }
 
 function updateSummary(counts) {
