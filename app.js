@@ -112,7 +112,7 @@ function addPoisToMap(elements, radiusMeters) {
   poiLayer.clearLayers();
   const counts = { worship: 0, school: 0, park: 0, daycare: 0 };
   
-  // We start the bounds with the center point to ensure we always zoom somewhere!
+  // 1. Initialize bounds with the center point so we ALWAYS have a zoom target
   const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
 
   elements.forEach(el => {
@@ -123,7 +123,7 @@ function addPoisToMap(elements, radiusMeters) {
     const lon = el.lon || (el.center && el.center.lon);
     if (!lat || !lon) return;
 
-    // PERFECT CIRCLE FILTER
+    // Perfect Circle Filter
     const dist = map.distance([lat, lon], [currentCenter.lat, currentCenter.lon]);
     if (dist > radiusMeters) return; 
 
@@ -134,22 +134,30 @@ function addPoisToMap(elements, radiusMeters) {
      .bindPopup(`<strong>${style.label}</strong><br>${el.tags.name || "Unnamed"}`)
      .addTo(poiLayer);
     
-    // Add this point to our zoom boundaries
+    // Extend bounds to include this marker
     bounds.extend([lat, lon]);
   });
 
   updateSummary(counts);
 
-  // ZOOM EFFECT: Force the map to fit the search area
-  // If no POIs found, it will zoom to the center point. 
-  // If POIs are found, it zooms to fit all of them.
-  map.invalidateSize(); // Fixes issues where map div size isn't updated
-  map.fitBounds(bounds, { 
-    padding: [50, 50], 
-    maxZoom: 16,
-    animate: true,
-    duration: 1.5 // Smooth 1.5 second zoom
-  });
+  // 2. FORCE ZOOM LOGIC
+  // We use a tiny timeout (50ms) to ensure the DOM has updated before zooming
+  setTimeout(() => {
+    map.invalidateSize(); // Refreshes the map container math
+    
+    // If we only have the center point, use setView to go close
+    if (counts.worship + counts.school + counts.park + counts.daycare === 0) {
+      map.setView([currentCenter.lat, currentCenter.lon], 15, { animate: true });
+    } else {
+      // Otherwise, zoom to fit all markers
+      map.fitBounds(bounds, { 
+        padding: [50, 50], 
+        maxZoom: 16, 
+        animate: true,
+        duration: 1 // 1 second animation
+      });
+    }
+  }, 50); 
 }
 
 function updateSummary(counts) {
