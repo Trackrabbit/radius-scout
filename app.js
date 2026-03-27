@@ -9,7 +9,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 let centerMarker = null;
 let radiusCircle = null;
 let poiLayer = L.layerGroup().addTo(map);
-let currentCenter = null; // Store the current search center
+let currentCenter = null;
 
 const poiStyles = {
   worship: { color: "#f56565", label: "Place of Worship" },
@@ -55,7 +55,7 @@ async function geocodeAddress(address) {
   return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), label: data[0].display_name };
 }
 
-// Overpass API
+// Overpass API with FAILOVER (Multi-Server)
 async function fetchFromOverpass(lat, lon, radiusMeters, options) {
   const box = getBoundingBox(lat, lon, radiusMeters);
   const bboxStr = `${box.south},${box.west},${box.north},${box.east}`;
@@ -71,16 +71,14 @@ async function fetchFromOverpass(lat, lon, radiusMeters, options) {
   const query = `[out:json][timeout:15];(${filters.join("")});out center;`;
   const encodedQuery = "data=" + encodeURIComponent(query);
 
-  // List of reliable Overpass instances
   const servers = [
-    "https://overpass.kumi.systems/api/interpreter", // Usually fast, less traffic
-    "https://lz4.overpass-api.de/api/interpreter",   // Main server (Instance 1)
-    "https://z.overpass-api.de/api/interpreter"      // Main server (Instance 2)
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter",
+    "https://z.overpass-api.de/api/interpreter"
   ];
 
   for (const url of servers) {
     try {
-      console.log(`Trying Overpass server: ${url}`);
       const res = await fetch(url, {
         method: "POST",
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -92,14 +90,11 @@ async function fetchFromOverpass(lat, lon, radiusMeters, options) {
         const data = await res.json();
         return data.elements || [];
       }
-      
-      console.warn(`Server ${url} returned non-JSON or error. Trying next...`);
     } catch (e) {
-      console.error(`Failed to reach ${url}:`, e);
+      console.warn(`Server ${url} failed, trying next...`);
     }
   }
-
-  throw new Error("All Overpass servers are currently busy or down. Please try again in 30 seconds.");
+  throw new Error("All map data servers are busy. Please try again in 10 seconds.");
 }
 
 function categorizeElement(el) {
@@ -112,11 +107,13 @@ function categorizeElement(el) {
   return null;
 }
 
-// ADDED: The "Perfect Circle" logic is inside here
+// The UI and Zoom logic
 function addPoisToMap(elements, radiusMeters) {
   poiLayer.clearLayers();
   const counts = { worship: 0, school: 0, park: 0, daycare: 0 };
-  const markers = [];
+  
+  // We start the bounds with the center point to ensure we always zoom somewhere!
+  const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
 
   elements.forEach(el => {
     const cat = categorizeElement(el);
@@ -126,29 +123,33 @@ function addPoisToMap(elements, radiusMeters) {
     const lon = el.lon || (el.center && el.center.lon);
     if (!lat || !lon) return;
 
-    // --- CIRCLE FILTER ---
-    // Calculate distance from center to POI in meters
-    const distanceToCenter = map.distance([lat, lon], [currentCenter.lat, currentCenter.lon]);
-    
-    // If it's outside the circle (the "corners" of our box), skip it!
-    if (distanceToCenter > radiusMeters) return; 
+    // PERFECT CIRCLE FILTER
+    const dist = map.distance([lat, lon], [currentCenter.lat, currentCenter.lon]);
+    if (dist > radiusMeters) return; 
 
     counts[cat]++;
     const style = poiStyles[cat];
+    
     L.marker([lat, lon], { icon: createPoiIcon(style.color) })
      .bindPopup(`<strong>${style.label}</strong><br>${el.tags.name || "Unnamed"}`)
      .addTo(poiLayer);
     
-    markers.push([lat, lon]);
+    // Add this point to our zoom boundaries
+    bounds.extend([lat, lon]);
   });
 
   updateSummary(counts);
 
-  if (markers.length > 0) {
-    const bounds = L.latLngBounds(markers);
-    if (centerMarker) bounds.extend(centerMarker.getLatLng());
-    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
-  }
+  // ZOOM EFFECT: Force the map to fit the search area
+  // If no POIs found, it will zoom to the center point. 
+  // If POIs are found, it zooms to fit all of them.
+  map.invalidateSize(); // Fixes issues where map div size isn't updated
+  map.fitBounds(bounds, { 
+    padding: [50, 50], 
+    maxZoom: 16,
+    animate: true,
+    duration: 1.5 // Smooth 1.5 second zoom
+  });
 }
 
 function updateSummary(counts) {
@@ -181,13 +182,18 @@ searchBtn.addEventListener("click", async () => {
 
   try {
     const loc = await geocodeAddress(address);
-    currentCenter = loc; // Store for the distance check
+    currentCenter = loc; 
 
     if (centerMarker) map.removeLayer(centerMarker);
-    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map).bindPopup("Search Center");
+    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map).bindPopup("<b>Center:</b> " + loc.label);
 
     if (radiusCircle) map.removeLayer(radiusCircle);
-    radiusCircle = L.circle([loc.lat, loc.lon], { radius: radiusMeters, color: "#4fd1c5", fillOpacity: 0.1 }).addTo(map);
+    radiusCircle = L.circle([loc.lat, loc.lon], { 
+        radius: radiusMeters, 
+        color: "#4fd1c5", 
+        weight: 2,
+        fillOpacity: 0.1 
+    }).addTo(map);
 
     const results = await fetchFromOverpass(loc.lat, loc.lon, radiusMeters, options);
     addPoisToMap(results, radiusMeters);
