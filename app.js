@@ -1,4 +1,5 @@
 // ===== Map setup =====
+// Center on Macon, GA by default
 const map = L.map("map").setView([32.8407, -83.6324], 12);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -11,17 +12,17 @@ let radiusCircle = null;
 let poiLayer = L.layerGroup().addTo(map);
 let currentCenter = null;
 
-// Expanded Styles with new categories
+// Expanded Styles to match the new CSS colors
 const poiStyles = {
   worship: { color: "#f56565", label: "Place of Worship" },
   school: { color: "#ecc94b", label: "School" },
-  park: { color: "#48bb78", label: "Park" },
-  daycare: { color: "#9f7aea", label: "Daycare" },
-  kindergarten: { color: "#ed8936", label: "Kindergarten" },
-  pool: { color: "#4299e1", label: "Pool" },
-  library: { color: "#667eea", label: "Library" },
   college: { color: "#ed64a6", label: "College/Uni" },
-  playground: { color: "#38b2ac", label: "Playground" }
+  kindergarten: { color: "#ed8936", label: "Kindergarten" },
+  daycare: { color: "#9f7aea", label: "Daycare" },
+  library: { color: "#667eea", label: "Library" },
+  park: { color: "#48bb78", label: "Park" },
+  playground: { color: "#38b2ac", label: "Playground" },
+  pool: { color: "#4299e1", label: "Pool" }
 };
 
 function createPoiIcon(color) {
@@ -33,6 +34,7 @@ function createPoiIcon(color) {
   });
 }
 
+// Math: Fast Box Boundaries for Overpass
 function getBoundingBox(lat, lon, radiusMeters) {
   const latOffset = radiusMeters / 111320; 
   const lonOffset = radiusMeters / (111320 * Math.cos(lat * (Math.PI / 180)));
@@ -42,6 +44,7 @@ function getBoundingBox(lat, lon, radiusMeters) {
   };
 }
 
+// Geocoding via Nominatim
 async function geocodeAddress(address) {
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", address);
@@ -49,45 +52,58 @@ async function geocodeAddress(address) {
   url.searchParams.set("limit", "1");
 
   const res = await fetch(url.toString(), {
-    headers: { "User-Agent": "MapSearchTool/1.0" }
+    headers: { "User-Agent": "RadiusScout/1.0" }
   });
+
   if (!res.ok) throw new Error("Geocoding failed.");
   const data = await res.json();
   if (!data.length) throw new Error("Address not found.");
+
   return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), label: data[0].display_name };
 }
 
+// Overpass API Fetching
 async function fetchFromOverpass(lat, lon, radiusMeters, options) {
   const box = getBoundingBox(lat, lon, radiusMeters);
   const bboxStr = `${box.south},${box.west},${box.north},${box.east}`;
   
   const filters = [];
-  if (options.worship) filters.push(`nwr["amenity"="place_of_worship"](${bboxStr});`);
-  if (options.schools) filters.push(`nwr["amenity"="school"](${bboxStr});`);
-  if (options.parks)   filters.push(`nwr["leisure"="park"](${bboxStr});`);
-  if (options.daycare) filters.push(`nwr["amenity"="childcare"](${bboxStr});`);
+  if (options.worship)     filters.push(`nwr["amenity"="place_of_worship"](${bboxStr});`);
+  if (options.schools)     filters.push(`nwr["amenity"="school"](${bboxStr});`);
+  if (options.colleges)    filters.push(`nwr["amenity"~"college|university"](${bboxStr});`);
   if (options.kindergarten) filters.push(`nwr["amenity"="kindergarten"](${bboxStr});`);
-  if (options.pools)   filters.push(`nwr["leisure"="swimming_pool"](${bboxStr});`);
-  if (options.libraries) filters.push(`nwr["amenity"="library"](${bboxStr});`);
-  if (options.colleges)  filters.push(`nwr["amenity"~"college|university"](${bboxStr});`);
-  if (options.playgrounds) filters.push(`nwr["leisure"="playground"](${bboxStr});`);
+  if (options.daycare)      filters.push(`nwr["amenity"="childcare"](${bboxStr});`);
+  if (options.libraries)    filters.push(`nwr["amenity"="library"](${bboxStr});`);
+  if (options.parks)        filters.push(`nwr["leisure"="park"](${bboxStr});`);
+  if (options.playgrounds)  filters.push(`nwr["leisure"="playground"](${bboxStr});`);
+  if (options.pools)        filters.push(`nwr["leisure"="swimming_pool"](${bboxStr});`);
 
   if (!filters.length) return [];
 
   const query = `[out:json][timeout:15];(${filters.join("")});out center;`;
   const encodedQuery = "data=" + encodeURIComponent(query);
-  const servers = ["https://overpass.kumi.systems/api/interpreter", "https://lz4.overpass-api.de/api/interpreter"];
+
+  const servers = [
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter"
+  ];
 
   for (const url of servers) {
     try {
-      const res = await fetch(url, { method: "POST", body: encodedQuery });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: encodedQuery
+      });
       if (res.ok) {
         const data = await res.json();
         return data.elements || [];
       }
-    } catch (e) { console.warn(`Server ${url} failed.`); }
+    } catch (e) {
+      console.warn(`Server ${url} failed, trying next...`);
+    }
   }
-  throw new Error("Data servers busy.");
+  throw new Error("All map data servers are busy. Try again in a few seconds.");
 }
 
 function categorizeElement(el) {
@@ -95,19 +111,39 @@ function categorizeElement(el) {
   if (!t) return null;
   if (t.amenity === "place_of_worship") return "worship";
   if (t.amenity === "school") return "school";
-  if (t.leisure === "park") return "park";
-  if (t.amenity === "childcare") return "daycare";
-  if (t.amenity === "kindergarten") return "kindergarten";
-  if (t.leisure === "swimming_pool") return "pool";
-  if (t.amenity === "library") return "library";
   if (t.amenity === "college" || t.amenity === "university") return "college";
+  if (t.amenity === "kindergarten") return "kindergarten";
+  if (t.amenity === "childcare") return "daycare";
+  if (t.amenity === "library") return "library";
+  if (t.leisure === "park") return "park";
   if (t.leisure === "playground") return "playground";
+  if (t.leisure === "swimming_pool") return "pool";
   return null;
+}
+
+function updateSummary(counts) {
+  const mapping = { 
+    worship: "countWorship", school: "countSchools", college: "countColleges",
+    kindergarten: "countKindergarten", daycare: "countDaycare",
+    library: "countLibraries", park: "countParks", 
+    playground: "countPlaygrounds", pool: "countPools"
+  };
+
+  Object.keys(mapping).forEach(key => {
+    const el = document.getElementById(mapping[key]);
+    if (el) el.textContent = counts[key] || 0;
+  });
+
+  document.getElementById("summaryPopup")?.classList.remove("hidden");
 }
 
 function addPoisToMap(elements, radiusMeters) {
   poiLayer.clearLayers();
-  const counts = { worship: 0, school: 0, park: 0, daycare: 0, kindergarten: 0, pool: 0, library: 0, college: 0, playground: 0 };
+  const counts = { 
+    worship: 0, school: 0, college: 0, kindergarten: 0, 
+    daycare: 0, library: 0, park: 0, playground: 0, pool: 0 
+  };
+  
   const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
   let hasPois = false;
 
@@ -145,50 +181,68 @@ function addPoisToMap(elements, radiusMeters) {
   }, 100); 
 }
 
-function updateSummary(counts) {
-  // Matches IDs in your HTML (e.g., <span id="countKindergarten">0</span>)
-  const mapping = { 
-    worship: "countWorship", school: "countSchools", park: "countParks", 
-    daycare: "countDaycare", kindergarten: "countKindergarten",
-    pool: "countPools", library: "countLibraries", college: "countColleges",
-    playground: "countPlaygrounds"
-  };
-  Object.keys(mapping).forEach(key => {
-    const el = document.getElementById(mapping[key]);
-    if (el) el.textContent = counts[key];
-  });
-}
+// UI Selectors
+const addressInput = document.getElementById("addressInput");
+const radiusSelect = document.getElementById("radiusSelect");
+const searchBtn = document.getElementById("searchBtn");
+const clearBtn = document.getElementById("clearBtn");
 
+// Search Logic
 searchBtn.addEventListener("click", async () => {
   const address = addressInput.value.trim();
+  if (!address) return alert("Please enter an address.");
+
   const radiusMeters = parseInt(radiusSelect.value, 10);
   const options = {
     worship: document.getElementById("poiWorship")?.checked,
     schools: document.getElementById("poiSchools")?.checked,
-    parks: document.getElementById("poiParks")?.checked,
-    daycare: document.getElementById("poiDaycare")?.checked,
-    kindergarten: document.getElementById("poiKindergarten")?.checked,
-    pools: document.getElementById("poiPools")?.checked,
-    libraries: document.getElementById("poiLibraries")?.checked,
     colleges: document.getElementById("poiColleges")?.checked,
-    playgrounds: document.getElementById("poiPlaygrounds")?.checked
+    kindergarten: document.getElementById("poiKindergarten")?.checked,
+    daycare: document.getElementById("poiDaycare")?.checked,
+    libraries: document.getElementById("poiLibraries")?.checked,
+    parks: document.getElementById("poiParks")?.checked,
+    playgrounds: document.getElementById("poiPlaygrounds")?.checked,
+    pools: document.getElementById("poiPools")?.checked
   };
 
   searchBtn.disabled = true;
+  searchBtn.textContent = "Searching...";
+
   try {
     const loc = await geocodeAddress(address);
     currentCenter = loc; 
+
     if (centerMarker) map.removeLayer(centerMarker);
-    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map);
+    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map).bindPopup("<b>Center:</b> " + loc.label);
 
     if (radiusCircle) map.removeLayer(radiusCircle);
-    radiusCircle = L.circle([loc.lat, loc.lon], { radius: radiusMeters, color: "#4fd1c5", fillOpacity: 0.1 }).addTo(map);
+    radiusCircle = L.circle([loc.lat, loc.lon], { 
+        radius: radiusMeters, 
+        color: "#4fd1c5", 
+        fillOpacity: 0.1 
+    }).addTo(map);
 
     const results = await fetchFromOverpass(loc.lat, loc.lon, radiusMeters, options);
     addPoisToMap(results, radiusMeters);
+
   } catch (err) {
     alert(err.message);
   } finally {
     searchBtn.disabled = false;
+    searchBtn.textContent = "Search Area";
   }
+});
+
+// Clear Logic
+clearBtn.addEventListener("click", () => {
+  poiLayer.clearLayers();
+  if (centerMarker) map.removeLayer(centerMarker);
+  if (radiusCircle) map.removeLayer(radiusCircle);
+  
+  addressInput.value = "";
+  document.getElementById("summaryPopup")?.classList.add("hidden");
+  
+  // Reset to default view
+  map.setView([32.8407, -83.6324], 12);
+  console.log("Map cleared.");
 });
