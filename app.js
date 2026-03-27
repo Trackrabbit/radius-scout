@@ -69,15 +69,37 @@ async function fetchFromOverpass(lat, lon, radiusMeters, options) {
   if (!filters.length) return [];
 
   const query = `[out:json][timeout:15];(${filters.join("")});out center;`;
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: "data=" + encodeURIComponent(query)
-  });
+  const encodedQuery = "data=" + encodeURIComponent(query);
 
-  if (!res.ok) throw new Error("Overpass server busy.");
-  const data = await res.json();
-  return data.elements || [];
+  // List of reliable Overpass instances
+  const servers = [
+    "https://overpass.kumi.systems/api/interpreter", // Usually fast, less traffic
+    "https://lz4.overpass-api.de/api/interpreter",   // Main server (Instance 1)
+    "https://z.overpass-api.de/api/interpreter"      // Main server (Instance 2)
+  ];
+
+  for (const url of servers) {
+    try {
+      console.log(`Trying Overpass server: ${url}`);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: encodedQuery
+      });
+
+      const contentType = res.headers.get("content-type");
+      if (res.ok && contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        return data.elements || [];
+      }
+      
+      console.warn(`Server ${url} returned non-JSON or error. Trying next...`);
+    } catch (e) {
+      console.error(`Failed to reach ${url}:`, e);
+    }
+  }
+
+  throw new Error("All Overpass servers are currently busy or down. Please try again in 30 seconds.");
 }
 
 function categorizeElement(el) {
