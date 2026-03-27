@@ -192,33 +192,3 @@ searchBtn.addEventListener("click", async () => {
     searchBtn.disabled = false;
   }
 });
-
-const clearBtn = document.getElementById("clearBtn");
-
-clearBtn.addEventListener("click", () => {
-  // 1. Clear the Layers
-  poiLayer.clearLayers();
-  if (centerMarker) map.removeLayer(centerMarker);
-  if (radiusCircle) map.removeLayer(radiusCircle);
-
-  // 2. Reset the Summary Counts to 0
-  const countIds = [
-    "countWorship", "countSchools", "countColleges", 
-    "countKindergarten", "countDaycare", "countLibraries", 
-    "countParks", "countPlaygrounds", "countPools"
-  ];
-  
-  countIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = "0";
-  });
-
-  // 3. Hide the summary box and reset the input
-  document.getElementById("summaryPopup")?.classList.add("hidden");
-  document.getElementById("addressInput").value = "";
-  
-  // 4. Reset map view to the original position
-  map.setView([32.8407, -83.6324], 12);
-  
-  console.log("Map cleared.");
-});
