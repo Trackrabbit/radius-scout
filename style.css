@@ -17,8 +17,16 @@ html, body { height: 100%; margin: 0; font-family: sans-serif; background: var(-
   height: 100vh;
 }
 
-header { grid-column: 1 / -1; padding: 1rem; background: var(--bg-main); border-bottom: 1px solid var(--border-subtle); height: 60px; }
-header h1 { margin: 0; font-size: 1.2rem; color: var(--accent); text-transform: uppercase; }
+header { grid-column: 1 / -1; 
+  padding: 1rem; 
+  background: var(--bg-main); 
+  border-bottom: 1px solid var(--border-subtle); 
+  height: 60px; }
+
+header h1 { margin: 0; 
+   font-size: 1.2rem; 
+   color: var(--accent); 
+   text-transform: uppercase; }
 
 #controls {
   padding: 1.25rem; background: var(--bg-panel); border-right: 1px solid var(--border-subtle);
@@ -28,10 +36,87 @@ header h1 { margin: 0; font-size: 1.2rem; color: var(--accent); text-transform: 
 .form-row label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; display: block; }
 #addressInput, #radiusSelect { width: 100%; padding: 0.6rem; background: #080a0f; border: 1px solid var(--border-subtle); color: white; border-radius: 4px; }
 
-.checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
-.checkbox-grid label { background: var(--bg-panel-alt); padding: 0.4rem; font-size: 0.75rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
 
-#toggleAllBtn { background: none; border: none; color: var(--accent); font-size: 0.65rem; cursor: pointer; text-transform: uppercase; font-weight: bold; }
+.checkbox-grid label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(26, 32, 46, 0.4); /* Semi-transparent dark */
+  padding: 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Subtle Glow on Hover */
+.checkbox-grid label:hover {
+  background: rgba(79, 209, 197, 0.05);
+  border-color: var(--accent);
+  color: var(--text-main);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Styling the actual Checkbox Input */
+.checkbox-grid input[type="checkbox"] {
+  appearance: none; /* Hide the ugly default browser box */
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-subtle);
+  border-radius: 3px;
+  background: #080a0f;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+/* Checked State for the Box */
+.checkbox-grid input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* The "Checkmark" itself */
+.checkbox-grid input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 4px;
+  height: 8px;
+  border: solid #0a0c10;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Highlight the Label when Checked */
+.checkbox-grid label:has(input:checked) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(79, 209, 197, 0.08);
+}
+
+#toggleAllBtn { 
+  background: none; 
+  border: none; 
+  color: var(--accent); 
+  font-size: 0.65rem; 
+  cursor: pointer; 
+  text-transform: uppercase; 
+  font-weight: bold; }
 
 /* --- Buttons --- */
 .button-group {
@@ -100,3 +185,19 @@ header h1 { margin: 0; font-size: 1.2rem; color: var(--accent); text-transform: 
 #map { width: 100%; height: 100%; background: #05070c; }
 
 path.bus-route-glow { filter: drop-shadow(0 0 3px currentColor); pointer-events: auto; }
+
+path.circle-glow {
+    filter: drop-shadow(0 0 5px #4fd1c5);
+    animation: circle-pulse 3s infinite ease-in-out;
+}
+
+@keyframes circle-pulse {
+    0% { stroke-opacity: 0.4; }
+    50% { stroke-opacity: 1.0; }
+    100% { stroke-opacity: 0.4; }
+}
+
+/* Ensure the map background doesn't wash out the circle */
+.leaflet-container {
+    background: #05070c !important;
+}
