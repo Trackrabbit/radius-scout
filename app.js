@@ -22,7 +22,8 @@ const poiStyles = {
   library: { color: "#667eea", label: "Library" },
   park: { color: "#48bb78", label: "Park" },
   playground: { color: "#38b2ac", label: "Playground" },
-  pool: { color: "#4299e1", label: "Pool" }
+  pool: { color: "#4299e1", label: "Pool" },
+  busLines: { color: "#63b3ed", label: "Bus Route" }
 };
 
 function createPoiIcon(color) {
@@ -107,12 +108,18 @@ async function fetchFromOverpass(lat, lon, radiusMeters, options) {
 function categorizeElement(el) {
   const t = el.tags;
   if (!t) return null;
+  // 1. Handle Bus Routes (Relations/Lines)
+  if (t.route === "bus") return "busLines";
+  
+  // 2. Handle Amenities (Points/Markers)
   if (t.amenity === "place_of_worship") return "worship";
   if (t.amenity === "school") return "school";
   if (t.amenity === "college" || t.amenity === "university") return "college";
   if (t.amenity === "kindergarten") return "kindergarten";
   if (t.amenity === "childcare") return "daycare";
   if (t.amenity === "library") return "library";
+
+  // 3. Handle Leisure (Parks/Playgrounds/Pools)
   if (t.leisure === "park") return "park";
   if (t.leisure === "playground") return "playground";
   if (t.leisure === "swimming_pool") return "pool";
@@ -124,7 +131,8 @@ function updateSummary(counts) {
     worship: "countWorship", school: "countSchools", college: "countColleges",
     kindergarten: "countKindergarten", daycare: "countDaycare",
     library: "countLibraries", park: "countParks", 
-    playground: "countPlaygrounds", pool: "countPools"
+    playground: "countPlaygrounds", pool: "countPools",
+    busLines: "countBusLines"
   };
 
   Object.keys(mapping).forEach(key => {
@@ -235,7 +243,8 @@ searchBtn.addEventListener("click", async () => {
     libraries: document.getElementById("poiLibraries")?.checked,
     parks: document.getElementById("poiParks")?.checked,
     playgrounds: document.getElementById("poiPlaygrounds")?.checked,
-    pools: document.getElementById("poiPools")?.checked
+    pools: document.getElementById("poiPools")?.checked,
+    busLines: document.getElementById("poiBusLines")?.checked
   };
 
   searchBtn.disabled = true;
