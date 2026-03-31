@@ -55,37 +55,65 @@ function addPoisToMap(elements, radiusMeters) {
     activeBusLayers = {};
     const counts = { worship: 0, school: 0, college: 0, kindergarten: 0, daycare: 0, library: 0, park: 0, playground: 0, pool: 0, busLines: 0 };
     let busIdx = 0; let legendHtml = "";
+    
+    // 1. Initialize bounds ONLY at the center point
     const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
     let hasItems = false;
 
     elements.forEach(el => {
         if(el.type === "relation" && el.tags.route === "bus") {
-            hasItems = true; counts.busLines++;
+            counts.busLines++;
             const color = routeColors[busIdx % routeColors.length];
             const isDashed = busIdx % 2 !== 0;
             const rid = `r-${el.id}`;
+            
             legendHtml += `<div class="legend-route" onmouseover="highlightRoute('${rid}')" onmouseout="unhighlightRoute('${rid}')">
                 <div class="route-line-preview" style="background:${color}; border-top:${isDashed?'2px dashed #0a0c10':'none'}"></div>
                 <span class="route-label">${el.tags.ref || 'Bus'}</span>
             </div>`;
             busIdx++;
+
             let coords = el.members.filter(m => m.geometry).map(m => m.geometry.map(p => [p.lat, p.lon]));
-            const poly = L.polyline(coords, { color: color, weight: 7, opacity: 0.5, className: 'bus-route-glow', dashArray: isDashed?"10,10":null }).addTo(poiLayer);
+            const poly = L.polyline(coords, { 
+                color: color, 
+                weight: 7, 
+                opacity: 0.5, 
+                className: 'bus-route-glow', 
+                dashArray: isDashed ? "10,10" : null 
+            }).addTo(poiLayer);
+            
             activeBusLayers[rid] = { layer: poly, style: { weight: 7, opacity: 0.5 } };
-            bounds.extend(poly.getBounds());
+            
+            // REMOVED: bounds.extend(poly.getBounds()); 
+            // We no longer expand the map view for the bus lines.
+            
         } else {
             const cat = categorize(el);
             if(!cat) return;
             const pos = [el.lat || el.center.lat, el.lon || el.center.lon];
-            if(map.distance(pos, [currentCenter.lat, currentCenter.lon]) > radiusMeters) return;
-            hasItems = true; counts[cat]++;
-            L.marker(pos, { icon: L.divIcon({ html: `<div style="background:${poiStyles[cat].color}; width:12px; height:12px; border-radius:50%; border:2px solid black;"></div>`, iconSize:[12,12], className:'' }) }).bindPopup(poiStyles[cat].label).addTo(poiLayer);
-            bounds.extend(pos);
+            
+            if(map.distance(pos, [currentCenter.lat, currentCenter.lon]) <= radiusMeters) {
+                hasItems = true; 
+                counts[cat]++;
+                L.marker(pos, { 
+                    icon: L.divIcon({ 
+                        html: `<div style="background:${poiStyles[cat].color}; width:12px; height:12px; border-radius:50%; border:2px solid black;"></div>`, 
+                        iconSize:[12,12], 
+                        className:'' 
+                    }) 
+                }).bindPopup(poiStyles[cat].label).addTo(poiLayer);
+                
+                // Only markers within the radius will expand the view slightly
+                bounds.extend(pos);
+            }
         }
     });
 
     updateUI(counts, legendHtml);
-    if(hasItems) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
+
+    // 2. THE TIGHT ZOOM (The Fix)
+    // We ignore the bounds of the bus routes and force a close-up on the center.
+    map.setView([currentCenter.lat, currentCenter.lon], 18, { animate: true });
 }
 
 function categorize(el) {
@@ -130,6 +158,9 @@ function setupEventListeners() {
         if(!data.length) return alert("Not found");
         
         currentCenter = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+
+        map.setView([currentCenter.lat, currentCenter.lon], 18, { animate: true });
+        
         if(centerMarker) map.removeLayer(centerMarker);
         if(radiusCircle) map.removeLayer(radiusCircle);
 
