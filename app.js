@@ -71,41 +71,82 @@ async function fetchFromOverpass(lat, lon, radius, options) {
 }
 
 function addPoisToMap(elements, radiusMeters) {
+    // 1. Clear everything first
     poiLayer.clearLayers();
     activeBusLayers = {};
     const counts = { worship: 0, school: 0, college: 0, kindergarten: 0, daycare: 0, library: 0, park: 0, playground: 0, pool: 0, busLines: 0 };
-    let busIdx = 0; let legendHtml = "";
+    let busIdx = 0; 
+    let legendHtml = "";
+    
+    // Create a fresh bounds object starting at the search center
     const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
+    let hasItems = false;
 
     elements.forEach(el => {
+        // --- BUS ROUTES ---
         if (el.type === "relation" && el.tags.route === "bus") {
             counts.busLines++;
+            hasItems = true;
             const color = routeColors[busIdx % routeColors.length];
             const isDashed = busIdx % 2 !== 0;
             const rid = `r-${el.id}`;
+            
             legendHtml += `<div class="legend-route" onmouseover="highlightRoute('${rid}')" onmouseout="unhighlightRoute('${rid}')">
-                <div class="route-line-preview" style="color:${color}; background:${color}; border-top:${isDashed?'2px dashed black':'none'}"></div>
+                <div class="route-line-preview" style="background:${color}; border-top:${isDashed?'2px dashed #0a0c10':'none'}"></div>
                 <span class="route-label">${el.tags.ref || 'Bus'}</span>
             </div>`;
             busIdx++;
             
             let coords = el.members.filter(m => m.geometry).map(m => m.geometry.map(p => [p.lat, p.lon]));
-            const poly = L.polyline(coords, { color: color, weight: 6, opacity: 0.5, className: 'bus-route-glow', dashArray: isDashed?"10,10":null }).addTo(poiLayer);
+            const poly = L.polyline(coords, { 
+                color: color, 
+                weight: 6, 
+                opacity: 0.5, 
+                className: 'bus-route-glow', 
+                dashArray: isDashed?"10,10":null 
+            }).addTo(poiLayer);
+            
             activeBusLayers[rid] = { layer: poly, style: { weight: 6, opacity: 0.5 } };
+            
+            // Critical: Extend bounds to include the whole bus line
             bounds.extend(poly.getBounds());
+            
         } else {
+            // --- MARKERS ---
             const cat = categorizeElement(el);
             if (!cat) return;
+            
             const pos = [el.lat || el.center.lat, el.lon || el.center.lon];
-            if (map.distance(pos, [currentCenter.lat, currentCenter.lon]) > radiusMeters) return;
-            counts[cat]++;
-            L.marker(pos, { icon: createPoiIcon(poiStyles[cat].color) }).addTo(poiLayer);
-            bounds.extend(pos);
+            
+            // Only add if it's within our radius
+            if (map.distance(pos, [currentCenter.lat, currentCenter.lon]) <= radiusMeters) {
+                hasItems = true;
+                counts[cat]++;
+                L.marker(pos, { icon: createPoiIcon(poiStyles[cat].color) })
+                 .bindPopup(`<strong>${poiStyles[cat].label}</strong><br>${el.tags.name || "Unnamed"}`)
+                 .addTo(poiLayer);
+                
+                // Critical: Extend bounds to include this marker
+                bounds.extend(pos);
+            }
         }
     });
 
+    // 2. Update the Sidebar
     updateSummary(counts, legendHtml);
-    if(bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] });
+
+    // 3. ZOOM LOGIC (The Fix)
+    if (hasItems) {
+        // If we found things, zoom to fit them all with some breathing room
+        map.fitBounds(bounds, { 
+            padding: [50, 50], 
+            maxZoom: 16, 
+            animate: true 
+        });
+    } else {
+        // If nothing found, just zoom in on the center point
+        map.setView([currentCenter.lat, currentCenter.lon], 16, { animate: true });
+    }
 }
 
 function updateSummary(counts, legend) {
@@ -136,8 +177,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if(!addr) return alert("Please enter an address");
         
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
+            const els = await fetchFromOverpass(currentCenter.lat, currentCenter.lon, radVal, options);
             const data = await res.json();
+            addPoisToMap(els, radVal); // This triggers the zoom logic above
             
             if(data.length > 0) {
                 currentCenter = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
