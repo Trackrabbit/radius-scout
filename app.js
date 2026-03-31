@@ -131,36 +131,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("searchBtn").addEventListener("click", async () => {
         const addr = document.getElementById("addressInput").value;
+        const radVal = parseInt(document.getElementById("radiusSelect").value);
+        
         if(!addr) return alert("Please enter an address");
         
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
             const data = await res.json();
+            
             if(data.length > 0) {
                 currentCenter = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
                 
+                // 1. Remove old Marker & Circle
                 if(centerMarker) map.removeLayer(centerMarker);
-                centerMarker = L.marker([currentCenter.lat, currentCenter.lon]).addTo(map).bindPopup("Center");
+                if(radiusCircle) map.removeLayer(radiusCircle);
                 
-                const radVal = parseInt(document.getElementById("radiusSelect").value);
+                // 2. Draw Center Marker
+                centerMarker = L.marker([currentCenter.lat, currentCenter.lon]).addTo(map).bindPopup("Search Center");
+                
+                // 3. DRAW RADIUS CIRCLE
+                radiusCircle = L.circle([currentCenter.lat, currentCenter.lon], {
+                    radius: radVal,
+                    color: 'var(--accent)',      // Teal border
+                    fillColor: 'var(--accent)',  // Teal fill
+                    fillOpacity: 0.1,            // Very light so you can see the map
+                    weight: 1,                   // Thin border
+                    dashArray: '5, 5',           // Dashed line
+                    interactive: false           // Clicks go through to the map
+                }).addTo(map);
+                
+                // 4. Fetch and Add POIs
                 const options = { 
                     busLines: document.getElementById("poiBusLines").checked,
                     worship: document.getElementById("poiWorship").checked,
                     schools: document.getElementById("poiSchools").checked,
                     colleges: document.getElementById("poiColleges").checked
+                    // Add more keys here if you add more checkboxes
                 };
                 
                 const els = await fetchFromOverpass(currentCenter.lat, currentCenter.lon, radVal, options);
                 addPoisToMap(els, radVal);
+                
             } else {
                 alert("Address not found");
             }
         } catch (e) {
             console.error(e);
-            alert("Error fetching data");
+            alert("Error fetching data from the server.");
         }
     });
-
+    
     document.getElementById("toggleAllBtn").addEventListener("click", (e) => {
         const cbs = document.querySelectorAll(".checkbox-grid input");
         const all = Array.from(cbs).every(c => c.checked);
@@ -171,6 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("clearBtn").addEventListener("click", () => {
         poiLayer.clearLayers();
         if(centerMarker) map.removeLayer(centerMarker);
+        if(radiusCircle) map.removeLayer(radiusCircle); // Remove the circle
         document.getElementById("summaryPopup").classList.add("hidden");
         document.getElementById("addressInput").value = "";
     });
