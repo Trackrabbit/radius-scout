@@ -159,11 +159,11 @@ function addPoisToMap(elements, radiusMeters) {
     if (el.type === "relation" && el.tags && el.tags.route === "bus") {
       counts.busLines++;
       hasItems = true;
-
-      // Extract coordinates from the geometry of the relation members
+    
       let routeCoords = [];
       if (el.members) {
         el.members.forEach(member => {
+          // "outer" or empty roles represent the actual street segments
           if (member.role === "" || member.role === "outer") {
             if (member.geometry) {
               const segment = member.geometry.map(pt => [pt.lat, pt.lon]);
@@ -172,9 +172,10 @@ function addPoisToMap(elements, radiusMeters) {
           }
         });
       }
-
+    
       if (routeCoords.length > 0) {
-        const polyline = L.multiPolyline(routeCoords, {
+        // CHANGE THIS LINE: from L.multiPolyline to L.polyline
+        const polyline = L.polyline(routeCoords, {
           color: "#4299e1", // Sky Blue
           weight: 5,
           opacity: 0.7,
@@ -185,7 +186,7 @@ function addPoisToMap(elements, radiusMeters) {
         
         bounds.extend(polyline.getBounds());
       }
-      return; // Skip marker logic for this item
+      return; 
     }
 
     // --- PART B: HANDLE MARKERS (NODES/WAYS) ---
