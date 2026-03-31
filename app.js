@@ -191,8 +191,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("clearBtn").addEventListener("click", () => {
         poiLayer.clearLayers();
         if(centerMarker) map.removeLayer(centerMarker);
-        if(radiusCircle) map.removeLayer(radiusCircle); // Remove the circle
+        if(radiusCircle) map.removeLayer(radiusCircle);
         document.getElementById("summaryPopup").classList.add("hidden");
         document.getElementById("addressInput").value = "";
+        // Reset bus index for the next search
+        busIdx = 0; 
     });
 });
