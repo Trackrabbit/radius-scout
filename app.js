@@ -127,7 +127,7 @@ function categorizeElement(el) {
   return null;
 }
 
-function updateSummary(counts) {
+function updateSummary(counts, routeLegendHtml) {
   const mapping = { 
     worship: "countWorship", school: "countSchools", college: "countColleges",
     kindergarten: "countKindergarten", daycare: "countDaycare",
@@ -136,10 +136,24 @@ function updateSummary(counts) {
     busLines: "countBusLines"
   };
 
+  // Update counts
   Object.keys(mapping).forEach(key => {
     const el = document.getElementById(mapping[key]);
     if (el) el.textContent = counts[key] || 0;
   });
+
+  // Update Legend
+  const legendContainer = document.getElementById("busLegend");
+  const legendWrapper = document.getElementById("transitLegend");
+
+  if (legendContainer && legendWrapper) {
+    if (routeLegendHtml) {
+      legendContainer.innerHTML = routeLegendHtml;
+      legendWrapper.style.display = "block"; // Show if routes exist
+    } else {
+      legendWrapper.style.display = "none";  // Hide if no routes
+    }
+  }
 
   document.getElementById("summaryPopup")?.classList.remove("hidden");
 }
