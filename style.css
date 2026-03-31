@@ -47,6 +47,22 @@ header p {
   font-size: 0.95rem;
 }
 
+/* Legend */
+.legend-route {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.legend-route:hover {
+  background: rgba(79, 209, 197, 0.1); /* Subtle teal glow */
+}
+
+.route-label {
+  pointer-events: none; /* Ensures hover works on the whole div */
+}
+
 /* Controls panel */
 #controls {
   padding: 1rem 1.5rem 1.5rem;
