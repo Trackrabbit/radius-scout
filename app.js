@@ -1,375 +1,141 @@
-// ===== Map setup =====
-// Center on Macon, GA by default
-const map = L.map("map").setView([32.8407, -83.6324], 12);
-
+// --- Globals ---
+const map = L.map("map").setView([32.8407, -83.6324], 13);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap contributors'
+    attribution: "© OpenStreetMap",
+    className: 'map-tiles'
 }).addTo(map);
 
 let centerMarker = null;
 let radiusCircle = null;
 let poiLayer = L.layerGroup().addTo(map);
 let currentCenter = null;
-let activeBusLayers = {};
+let activeBusLayers = {}; 
 
-// Expanded Styles to match the new CSS colors
 const poiStyles = {
-  worship: { color: "#f56565", label: "Place of Worship" },
-  school: { color: "#ecc94b", label: "School" },
-  college: { color: "#ed64a6", label: "College/Uni" },
-  kindergarten: { color: "#ed8936", label: "Kindergarten" },
-  daycare: { color: "#9f7aea", label: "Daycare" },
-  library: { color: "#667eea", label: "Library" },
-  park: { color: "#48bb78", label: "Park" },
-  playground: { color: "#38b2ac", label: "Playground" },
-  pool: { color: "#4299e1", label: "Pool" },
-  busLines: { color: "#63b3ed", label: "Bus Route" }
+    worship: { color: "#f56565", label: "Worship" },
+    school: { color: "#ecc94b", label: "School" },
+    college: { color: "#ed64a6", label: "College" },
+    kindergarten: { color: "#ed8936", label: "Kindergarten" },
+    daycare: { color: "#9f7aea", label: "Daycare" },
+    library: { color: "#667eea", label: "Library" },
+    park: { color: "#48bb78", label: "Park" },
+    playground: { color: "#38b2ac", label: "Playground" },
+    pool: { color: "#4299e1", label: "Pool" },
+    busLines: { color: "#00ffff", label: "Bus Route" }
 };
 
+const routeColors = ["#00ffff", "#7fff00", "#ff00ff", "#ff4500", "#ffff00", "#00ff7f"];
+
+// --- Helpers ---
 function createPoiIcon(color) {
-  return L.divIcon({
-    className: "custom-poi-icon",
-    html: `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${color};box-shadow:0 0 0 2px rgba(0,0,0,0.6);"></span>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7]
-  });
-}
-
-// Math: Fast Box Boundaries for Overpass
-function getBoundingBox(lat, lon, radiusMeters) {
-  const latOffset = radiusMeters / 111320; 
-  const lonOffset = radiusMeters / (111320 * Math.cos(lat * (Math.PI / 180)));
-  return {
-    south: lat - latOffset, west: lon - lonOffset,
-    north: lat + latOffset, east: lon + lonOffset
-  };
-}
-
-// Geocoding via Nominatim
-async function geocodeAddress(address) {
-  const url = new URL("https://nominatim.openstreetmap.org/search");
-  url.searchParams.set("q", address);
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "1");
-
-  const res = await fetch(url.toString(), {
-    headers: { "User-Agent": "RadiusScout/1.0" }
-  });
-
-  if (!res.ok) throw new Error("Geocoding failed.");
-  const data = await res.json();
-  if (!data.length) throw new Error("Address not found.");
-
-  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), label: data[0].display_name };
-}
-
-// Overpass API Fetching
-async function fetchFromOverpass(lat, lon, radiusMeters, options) {
-  const box = getBoundingBox(lat, lon, radiusMeters);
-  const bboxStr = `${box.south},${box.west},${box.north},${box.east}`;
-  
-  const filters = [];
-  // ... existing filters (Worship, Schools, etc.) ...
-  
-  // New Bus Line Filter
-  if (options.busLines) {
-    filters.push(`relation["route"="bus"](${bboxStr});`);
-  }
-
-  if (!filters.length) return [];
-
-  // CRITICAL CHANGE: "out geom" instead of "out center"
-  const query = `[out:json][timeout:25];(${filters.join("")});out geom;`;
-  const encodedQuery = "data=" + encodeURIComponent(query);
-
-  const servers = [
-    "https://overpass.kumi.systems/api/interpreter",
-    "https://lz4.overpass-api.de/api/interpreter"
-  ];
-
-  for (const url of servers) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encodedQuery
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return data.elements || [];
-      }
-    } catch (e) {
-      console.warn(`Server ${url} failed, trying next...`);
-    }
-  }
-  throw new Error("All map data servers are busy. Try again in a few seconds.");
+    return L.divIcon({
+        className: "custom-icon",
+        html: `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid black;"></div>`,
+        iconSize: [12, 12]
+    });
 }
 
 function categorizeElement(el) {
-  const t = el.tags;
-  if (!t) return null;
-  // 1. Handle Bus Routes (Relations/Lines)
-  if (t.route === "bus") return "busLines";
-  
-  // 2. Handle Amenities (Points/Markers)
-  if (t.amenity === "place_of_worship") return "worship";
-  if (t.amenity === "school") return "school";
-  if (t.amenity === "college" || t.amenity === "university") return "college";
-  if (t.amenity === "kindergarten") return "kindergarten";
-  if (t.amenity === "childcare") return "daycare";
-  if (t.amenity === "library") return "library";
-
-  // 3. Handle Leisure (Parks/Playgrounds/Pools)
-  if (t.leisure === "park") return "park";
-  if (t.leisure === "playground") return "playground";
-  if (t.leisure === "swimming_pool") return "pool";
-  return null;
+    const t = el.tags; if (!t) return null;
+    if (t.route === "bus") return "busLines";
+    if (t.amenity === "place_of_worship") return "worship";
+    if (t.amenity === "school") return "school";
+    if (t.amenity === "college" || t.amenity === "university") return "college";
+    if (t.amenity === "kindergarten") return "kindergarten";
+    if (t.amenity === "childcare") return "daycare";
+    if (t.amenity === "library") return "library";
+    if (t.leisure === "park") return "park";
+    if (t.leisure === "playground") return "playground";
+    if (t.leisure === "swimming_pool") return "pool";
+    return null;
 }
 
-function updateSummary(counts, routeLegendHtml) {
-  const mapping = { 
-    worship: "countWorship", school: "countSchools", college: "countColleges",
-    kindergarten: "countKindergarten", daycare: "countDaycare",
-    library: "countLibraries", park: "countParks", 
-    playground: "countPlaygrounds", pool: "countPools",
-    busLines: "countBusLines"
-  };
+// --- Core Logic ---
+async function fetchFromOverpass(lat, lon, radius, options) {
+    const offset = radius / 111320;
+    const b = `${lat-offset},${lon-offset},${lat+offset},${lon+offset}`;
+    let queries = [];
+    if (options.worship) queries.push(`nwr["amenity"="place_of_worship"](${b});`);
+    if (options.schools) queries.push(`nwr["amenity"="school"](${b});`);
+    if (options.busLines) queries.push(`relation["route"="bus"](${b});`);
+    // ... add other options as needed ...
 
-  // Update counts
-  Object.keys(mapping).forEach(key => {
-    const el = document.getElementById(mapping[key]);
-    if (el) el.textContent = counts[key] || 0;
-  });
-
-  // Update Legend
-  const legendContainer = document.getElementById("busLegend");
-  const legendWrapper = document.getElementById("transitLegend");
-
-  if (legendContainer && legendWrapper) {
-    if (routeLegendHtml) {
-      legendContainer.innerHTML = routeLegendHtml;
-      legendWrapper.style.display = "block"; // Show if routes exist
-    } else {
-      legendWrapper.style.display = "none";  // Hide if no routes
-    }
-  }
-
-  document.getElementById("summaryPopup")?.classList.remove("hidden");
+    const query = `[out:json][timeout:25];(${queries.join("")});out geom;`;
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        body: "data=" + encodeURIComponent(query)
+    });
+    const data = await res.json();
+    return data.elements || [];
 }
 
 function addPoisToMap(elements, radiusMeters) {
-  // 1. Reset everything for the new search
-  poiLayer.clearLayers();
-  activeBusLayers = {}; // Clear previous route references
-  
-  const counts = { 
-    worship: 0, school: 0, college: 0, kindergarten: 0, 
-    daycare: 0, library: 0, park: 0, playground: 0, pool: 0, 
-    busLines: 0 
-  };
-  
-  const routeColors = [
-  "#00ffff", // Neon Cyan
-  "#7fff00", // Chartreuse / Neon Green
-  "#ff00ff", // Magenta
-  "#ff4500", // Orange Red
-  "#ffff00", // Bright Yellow
-  "#00ff7f"  // Spring Green
-  ];
-  let busRouteIndex = 0;
-  let routeLegendHtml = "";
-  
-  const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
-  let hasItems = false;
+    poiLayer.clearLayers();
+    activeBusLayers = {};
+    const counts = { worship: 0, school: 0, college: 0, kindergarten: 0, daycare: 0, library: 0, park: 0, playground: 0, pool: 0, busLines: 0 };
+    let busIdx = 0; let legendHtml = "";
+    const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
 
-  elements.forEach(el => {
-    // --- PART A: BUS ROUTES (RELATIONS) ---
-    if (el.type === "relation" && el.tags && el.tags.route === "bus") {
-      counts.busLines++;
-      hasItems = true;
+    elements.forEach(el => {
+        if (el.type === "relation" && el.tags.route === "bus") {
+            counts.busLines++;
+            const color = routeColors[busIdx % routeColors.length];
+            const isDashed = busIdx % 2 !== 0;
+            const rid = `r-${el.id}`;
+            legendHtml += `<div class="legend-route" onmouseover="highlightRoute('${rid}')" onmouseout="unhighlightRoute('${rid}')">
+                <div class="route-line-preview" style="color:${color}; background:${color}; border-top:${isDashed?'2px dashed black':'none'}"></div>
+                <span class="route-label">${el.tags.ref || 'Bus'}</span>
+            </div>`;
+            busIdx++;
+            
+            let coords = el.members.filter(m => m.geometry).map(m => m.geometry.map(p => [p.lat, p.lon]));
+            const poly = L.polyline(coords, { color: color, weight: 6, opacity: 0.5, className: 'bus-route-glow', dashArray: isDashed?"10,10":null }).addTo(poiLayer);
+            activeBusLayers[rid] = { layer: poly, style: { weight: 6, opacity: 0.5 } };
+            bounds.extend(poly.getBounds());
+        } else {
+            const cat = categorizeElement(el);
+            if (!cat) return;
+            const pos = [el.lat || el.center.lat, el.lon || el.center.lon];
+            if (map.distance(pos, [currentCenter.lat, currentCenter.lon]) > radiusMeters) return;
+            counts[cat]++;
+            L.marker(pos, { icon: createPoiIcon(poiStyles[cat].color) }).addTo(poiLayer);
+            bounds.extend(pos);
+        }
+    });
 
-      const currentColor = routeColors[busRouteIndex % routeColors.length];
-      const isDashed = busRouteIndex % 2 !== 0; 
-      const busRef = el.tags.ref || "Bus";
-      const routeId = `route-${el.id}`; // Create a unique key for this bus line
+    updateSummary(counts, legendHtml);
+    map.fitBounds(bounds, { padding: [30, 30] });
+}
 
-      // Build Interactive Legend HTML
-      routeLegendHtml += `
-        <div class="legend-route" 
-             onmouseover="highlightRoute('${routeId}')" 
-             onmouseout="unhighlightRoute('${routeId}')"
-             onclick="focusRoute('${routeId}')">
-          <div class="route-line-preview" style="background:${currentColor}; border-top: ${isDashed ? '2px dashed #10131a' : 'none'};"></div>
-          <span class="route-label">${busRef}</span>
-        </div>
-      `;
-      
-      busRouteIndex++;
+function updateSummary(counts, legend) {
+    document.getElementById("countBusLines").textContent = counts.busLines;
+    // ... add other textContent updates ...
+    const leg = document.getElementById("busLegend");
+    leg.innerHTML = legend;
+    document.getElementById("transitLegend").style.display = legend ? "block" : "none";
+    document.getElementById("summaryPopup").classList.remove("hidden");
+}
 
-      let routeSegments = [];
-      if (el.members) {
-        el.members.forEach(member => {
-          if (member.geometry) {
-            routeSegments.push(member.geometry.map(pt => [pt.lat, pt.lon]));
-          }
-        });
-      }
+function highlightRoute(id) { if(activeBusLayers[id]) activeBusLayers[id].layer.setStyle({weight:12, opacity:1}).bringToFront(); }
+function unhighlightRoute(id) { if(activeBusLayers[id]) activeBusLayers[id].layer.setStyle(activeBusLayers[id].style); }
 
-      if (routeSegments.length > 0) {
-        // Create the "Glow" effect by using a high weight and low opacity
-        const busPath = L.polyline(routeSegments, {
-          color: currentColor,
-          weight: 8,          // Thicker for visibility
-          opacity: 0.4,       // Soft glow
-          lineJoin: 'round',
-          dashArray: isDashed ? "10, 10" : null,
-          className: 'bus-route-glow' // We will style this in CSS
-        }).addTo(poiLayer);
-    
-        // Add a second, sharper "Core" line on top
-        L.polyline(routeSegments, {
-          color: "#ffffff",   // White core makes the color beam
-          weight: 2,
-          opacity: 0.8,
-          lineJoin: 'round',
-          dashArray: isDashed ? "10, 10" : null,
-          interactive: false  // Let the glow line handle clicks/hovers
-        }).addTo(poiLayer);
-        
-        // Store for the hover effect
-        activeBusLayers[routeId] = {
-          layer: busPath,
-          originalStyle: { weight: 8, opacity: 0.4 }
-        };
-    
-        bounds.extend(busPath.getBounds());
+// --- UI Events ---
+document.getElementById("searchBtn").addEventListener("click", async () => {
+    const addr = document.getElementById("addressInput").value;
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${addr}`);
+    const data = await res.json();
+    if(data.length > 0) {
+        currentCenter = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+        map.setView([currentCenter.lat, currentCenter.lon], 15);
+        const els = await fetchFromOverpass(currentCenter.lat, currentCenter.lon, 305, { busLines: true, worship: true, schools: true });
+        addPoisToMap(els, 305);
     }
-
-    // --- PART B: MARKERS (NODES/WAYS) ---
-    const cat = categorizeElement(el);
-    if (!cat) return;
-
-    const lat = el.lat || (el.center && el.center.lat);
-    const lon = el.lon || (el.center && el.center.lon);
-    if (!lat || !lon) return;
-
-    const dist = map.distance([lat, lon], [currentCenter.lat, currentCenter.lon]);
-    if (dist > radiusMeters) return; 
-
-    hasItems = true;
-    counts[cat]++;
-    const style = poiStyles[cat];
-    
-    L.marker([lat, lon], { icon: createPoiIcon(style.color) })
-     .bindPopup(`<strong>${style.label}</strong><br>${el.tags.name || "Unnamed"}`)
-     .addTo(poiLayer);
-    
-    bounds.extend([lat, lon]);
-  });
-
-  // 2. Push data to the UI
-  updateSummary(counts, routeLegendHtml);
-
-  // 3. Final view adjustment
-  setTimeout(() => {
-    map.invalidateSize();
-    if (!hasItems) {
-      map.setView([currentCenter.lat, currentCenter.lon], 16, { animate: true });
-    } else {
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true });
-    }
-  }, 150); 
-}
-
-// --- HELPER FUNCTIONS FOR INTERACTION ---
-
-function highlightRoute(routeId) {
-  const data = activeBusLayers[routeId];
-  if (data) {
-    data.layer.setStyle({ weight: 10, opacity: 1.0 });
-    data.layer.bringToFront(); 
-  }
-}
-
-function unhighlightRoute(routeId) {
-  const data = activeBusLayers[routeId];
-  if (data) {
-    data.layer.setStyle(data.originalStyle);
-  }
-}
-
-function focusRoute(routeId) {
-  const data = activeBusLayers[routeId];
-  if (data) {
-    map.fitBounds(data.layer.getBounds(), { padding: [40, 40], animate: true });
-    data.layer.openPopup();
-  }
-}
-
-// UI Selectors
-const addressInput = document.getElementById("addressInput");
-const radiusSelect = document.getElementById("radiusSelect");
-const searchBtn = document.getElementById("searchBtn");
-const clearBtn = document.getElementById("clearBtn");
-
-// Search Logic
-searchBtn.addEventListener("click", async () => {
-  const address = addressInput.value.trim();
-  if (!address) return alert("Please enter an address.");
-
-  const radiusMeters = parseInt(radiusSelect.value, 10);
-  const options = {
-    worship: document.getElementById("poiWorship")?.checked,
-    schools: document.getElementById("poiSchools")?.checked,
-    colleges: document.getElementById("poiColleges")?.checked,
-    kindergarten: document.getElementById("poiKindergarten")?.checked,
-    daycare: document.getElementById("poiDaycare")?.checked,
-    libraries: document.getElementById("poiLibraries")?.checked,
-    parks: document.getElementById("poiParks")?.checked,
-    playgrounds: document.getElementById("poiPlaygrounds")?.checked,
-    pools: document.getElementById("poiPools")?.checked,
-    busLines: document.getElementById("poiBusLines")?.checked
-  };
-
-  searchBtn.disabled = true;
-  searchBtn.textContent = "Searching...";
-
-  try {
-    const loc = await geocodeAddress(address);
-    currentCenter = loc; 
-
-    if (centerMarker) map.removeLayer(centerMarker);
-    centerMarker = L.marker([loc.lat, loc.lon]).addTo(map).bindPopup("<b>Center:</b> " + loc.label);
-
-    if (radiusCircle) map.removeLayer(radiusCircle);
-    radiusCircle = L.circle([loc.lat, loc.lon], { 
-        radius: radiusMeters, 
-        color: "#4fd1c5", 
-        fillOpacity: 0.1 
-    }).addTo(map);
-
-    const results = await fetchFromOverpass(loc.lat, loc.lon, radiusMeters, options);
-    addPoisToMap(results, radiusMeters);
-
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    searchBtn.disabled = false;
-    searchBtn.textContent = "Search Area";
-  }
 });
 
-// Clear Logic
-clearBtn.addEventListener("click", () => {
-  poiLayer.clearLayers();
-  if (centerMarker) map.removeLayer(centerMarker);
-  if (radiusCircle) map.removeLayer(radiusCircle);
-  
-  addressInput.value = "";
-  document.getElementById("summaryPopup")?.classList.add("hidden");
-  
-  // Reset to default view
-  map.setView([32.8407, -83.6324], 12);
-  console.log("Map cleared.");
+// Smart Toggle
+document.getElementById("toggleAllBtn").addEventListener("click", (e) => {
+    const cbs = document.querySelectorAll(".checkbox-grid input");
+    const all = Array.from(cbs).every(c => c.checked);
+    cbs.forEach(c => c.checked = !all);
+    e.target.textContent = all ? "Select All" : "Deselect All";
 });
