@@ -155,7 +155,14 @@ function addPoisToMap(elements, radiusMeters) {
     busLines: 0 
   };
   
-  const routeColors = ["#4fd1c5", "#f6ad55", "#63b3ed", "#f687b3", "#9f7aea", "#fc8181"];
+  const routeColors = [
+  "#00ffff", // Neon Cyan
+  "#7fff00", // Chartreuse / Neon Green
+  "#ff00ff", // Magenta
+  "#ff4500", // Orange Red
+  "#ffff00", // Bright Yellow
+  "#00ff7f"  // Spring Green
+  ];
   let busRouteIndex = 0;
   let routeLegendHtml = "";
   
@@ -196,25 +203,33 @@ function addPoisToMap(elements, radiusMeters) {
       }
 
       if (routeSegments.length > 0) {
+        // Create the "Glow" effect by using a high weight and low opacity
         const busPath = L.polyline(routeSegments, {
           color: currentColor,
-          weight: 5,
-          opacity: 0.6, // Slightly transparent by default
+          weight: 8,          // Thicker for visibility
+          opacity: 0.4,       // Soft glow
           lineJoin: 'round',
-          dashArray: isDashed ? "10, 10" : null
-        })
-        .bindPopup(`<strong>Bus ${busRef}</strong><br><small>${el.tags.name || ""}</small>`)
-        .addTo(poiLayer);
+          dashArray: isDashed ? "10, 10" : null,
+          className: 'bus-route-glow' // We will style this in CSS
+        }).addTo(poiLayer);
+    
+        // Add a second, sharper "Core" line on top
+        L.polyline(routeSegments, {
+          color: "#ffffff",   // White core makes the color beam
+          weight: 2,
+          opacity: 0.8,
+          lineJoin: 'round',
+          dashArray: isDashed ? "10, 10" : null,
+          interactive: false  // Let the glow line handle clicks/hovers
+        }).addTo(poiLayer);
         
-        // Save the layer reference and its original style for the hover effect
+        // Store for the hover effect
         activeBusLayers[routeId] = {
           layer: busPath,
-          originalStyle: { color: currentColor, weight: 5, opacity: 0.6 }
+          originalStyle: { weight: 8, opacity: 0.4 }
         };
-
+    
         bounds.extend(busPath.getBounds());
-      }
-      return; 
     }
 
     // --- PART B: MARKERS (NODES/WAYS) ---
