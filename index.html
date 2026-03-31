@@ -3,83 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RadiusScout | Transit & POI</title>
+    <title>RadiusScout | Macon</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div id="app">
-    <header>
-        <h1>Radius Scout</h1>
-    </header>
-
-    <aside id="controls">
-        <div class="form-row">
-            <label for="addressInput">Center Address</label>
-            <input type="text" id="addressInput" placeholder="e.g. 700 Poplar St, Macon, GA">
-        </div>
-
-        <div class="form-row">
-            <label for="radiusSelect">Search Radius</label>
-            <select id="radiusSelect">
-                <option value="152">500 ft</option>
-                <option value="305" selected>1000 ft</option>
-            </select>
-        </div>
-
-        <div class="form-row checkbox-row">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="font-size: 0.7rem; font-weight: 800; color: var(--accent);">POI Types</span>
-                <button id="toggleAllBtn" type="button">Deselect All</button>
+    <div id="app">
+        <header><h1>RadiusScout</h1></header>
+        <aside id="controls">
+            <div class="form-row">
+                <label>Address</label>
+                <input type="text" id="addressInput" placeholder="e.g. 700 Poplar St, Macon, GA">
             </div>
-            <div class="checkbox-grid">
-                <label><input type="checkbox" id="poiWorship" checked> Worship</label>
-                <label><input type="checkbox" id="poiSchools" checked> Schools</label>
-                <label><input type="checkbox" id="poiColleges" checked> Colleges</label>
-                <label><input type="checkbox" id="poiKindergarten" checked> Kinder</label>
-                <label><input type="checkbox" id="poiDaycare" checked> Daycare</label>
-                <label><input type="checkbox" id="poiLibraries" checked> Library</label>
-                <label><input type="checkbox" id="poiParks" checked> Parks</label>
-                <label><input type="checkbox" id="poiPlaygrounds" checked> Play</label>
-                <label><input type="checkbox" id="poiPools" checked> Pools</label>
-                <label><input type="checkbox" id="poiBusLines" checked> Bus Lines</label>
+            <div class="form-row">
+                <label>Radius</label>
+                <select id="radiusSelect">
+                    <option value="152">500 ft</option>
+                    <option value="305" selected>1000 ft</option>
+                    <option value="1609">1 mile</option>
+                </select>
             </div>
-        </div>
-
-        <div class="button-group">
-            <button id="searchBtn">Search Area</button>
-            <button id="clearBtn">Clear</button>
-        </div>
-
-        <div id="summaryPopup" class="summary hidden">
-            <h3>POI Summary</h3>
-            <div class="poi-summary-grid">
-                <div class="summary-item">Worship: <span id="countWorship">0</span></div>
-                <div class="summary-item">Schools: <span id="countSchools">0</span></div>
-                <div class="summary-item">Colleges: <span id="countColleges">0</span></div>
-                <div class="summary-item">Kinder: <span id="countKindergarten">0</span></div>
-                <div class="summary-item">Daycare: <span id="countDaycare">0</span></div>
-                <div class="summary-item">Library: <span id="countLibraries">0</span></div>
-                <div class="summary-item">Parks: <span id="countParks">0</span></div>
-                <div class="summary-item">Play: <span id="countPlaygrounds">0</span></div>
-                <div class="summary-item">Pools: <span id="countPools">0</span></div>
-                <div class="summary-item">Buses: <span id="countBusLines">0</span></div>
+            <div class="form-row">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <span style="font-size:0.7rem; font-weight:800; color:var(--accent);">POIs</span>
+                    <button id="toggleAllBtn" type="button">Deselect All</button>
+                </div>
+                <div class="checkbox-grid">
+                    <label><input type="checkbox" id="poiWorship" checked> Worship</label>
+                    <label><input type="checkbox" id="poiSchools" checked> Schools</label>
+                    <label><input type="checkbox" id="poiColleges" checked> Colleges</label>
+                    <label><input type="checkbox" id="poiKindergarten" checked> Kinder</label>
+                    <label><input type="checkbox" id="poiDaycare" checked> Daycare</label>
+                    <label><input type="checkbox" id="poiLibraries" checked> Library</label>
+                    <label><input type="checkbox" id="poiParks" checked> Parks</label>
+                    <label><input type="checkbox" id="poiPlaygrounds" checked> Play</label>
+                    <label><input type="checkbox" id="poiPools" checked> Pools</label>
+                    <label><input type="checkbox" id="poiBusLines" checked> Bus Lines</label>
+                </div>
             </div>
-
-            <div id="transitLegend" style="display:none; margin-top: 15px; border-top: 1px solid var(--border-subtle); padding-top: 10px;">
-                <h4 style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Bus Routes</h4>
-                <div id="busLegend" class="bus-legend-grid"></div>
+            <div class="button-group">
+                <button id="searchBtn">Search Area</button>
+                <button id="clearBtn">Clear</button>
             </div>
-        </div>
-    </aside>
-
-    <main id="mapSection">
-        <div id="map"></div>
-    </main>
-</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="app.js"></script>
+            <div id="summaryPopup" class="summary hidden">
+                <h3>Summary</h3>
+                <div class="poi-summary-grid" id="summaryGrid">
+                    <div class="summary-item">Buses: <span id="countBusLines">0</span></div>
+                    <div class="summary-item">Worship: <span id="countWorship">0</span></div>
+                    <div class="summary-item">Schools: <span id="countSchools">0</span></div>
+                    <div class="summary-item">Colleges: <span id="countColleges">0</span></div>
+                    <div class="summary-item">Kinder: <span id="countKindergarten">0</span></div>
+                    <div class="summary-item">Daycare: <span id="countDaycare">0</span></div>
+                    <div class="summary-item">Library: <span id="countLibraries">0</span></div>
+                    <div class="summary-item">Parks: <span id="countParks">0</span></div>
+                    <div class="summary-item">Play: <span id="countPlaygrounds">0</span></div>
+                    <div class="summary-item">Pools: <span id="countPools">0</span></div>
+                </div>
+                <div id="transitLegend" style="display:none; margin-top:15px; border-top:1px solid var(--border-subtle); padding-top:10px;">
+                    <h4 style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Bus Routes</h4>
+                    <div id="busLegend" class="bus-legend-grid"></div>
+                </div>
+            </div>
+        </aside>
+        <main id="mapSection"><div id="map"></div></main>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
