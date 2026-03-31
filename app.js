@@ -150,32 +150,68 @@ function setupEventListeners() {
         document.getElementById("toggleAllBtn").textContent = all ? "Deselect All" : "Select All";
     });
     
-    document.getElementById("searchBtn").addEventListener("click", async () => {
+     document.getElementById("searchBtn").addEventListener("click", async () => {
+        const btn = document.getElementById("searchBtn");
         const addr = document.getElementById("addressInput").value;
         const rad = parseInt(document.getElementById("radiusSelect").value);
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
-        const data = await res.json();
-        if(!data.length) return alert("Not found");
         
-        currentCenter = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-
-        map.setView([currentCenter.lat, currentCenter.lon], 18, { animate: true });
-        
-        if(centerMarker) map.removeLayer(centerMarker);
-        if(radiusCircle) map.removeLayer(radiusCircle);
-
-        centerMarker = L.marker([currentCenter.lat, currentCenter.lon]).addTo(map);
-        radiusCircle = L.circle([currentCenter.lat, currentCenter.lon], { radius: rad, color: '#4fd1c5', fillOpacity: 0.15, weight: 3, dashArray: '10,5', className: 'circle-glow' }).addTo(map);
-
-        const opts = { 
-            worship: document.getElementById("poiWorship").checked, schools: document.getElementById("poiSchools").checked,
-            colleges: document.getElementById("poiColleges").checked, kindergarten: document.getElementById("poiKindergarten").checked,
-            daycare: document.getElementById("poiDaycare").checked, libraries: document.getElementById("poiLibraries").checked,
-            parks: document.getElementById("poiParks").checked, playgrounds: document.getElementById("poiPlaygrounds").checked,
-            pools: document.getElementById("poiPools").checked, busLines: document.getElementById("poiBusLines").checked
-        };
-        const els = await fetchFromOverpass(currentCenter.lat, currentCenter.lon, rad, opts);
-        addPoisToMap(els, rad);
+        if(!addr) return alert("Please enter an address");
+    
+        // 1. SET STATE TO SEARCHING
+        btn.textContent = "Searching...";
+        btn.disabled = true;
+        btn.style.opacity = "0.7";
+        btn.style.cursor = "not-allowed";
+    
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
+            const data = await res.json();
+            
+            if(data.length > 0) {
+                currentCenter = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+                
+                if(centerMarker) map.removeLayer(centerMarker);
+                if(radiusCircle) map.removeLayer(radiusCircle);
+    
+                centerMarker = L.marker([currentCenter.lat, currentCenter.lon]).addTo(map);
+                radiusCircle = L.circle([currentCenter.lat, currentCenter.lon], { 
+                    radius: rad, 
+                    color: '#4fd1c5', 
+                    fillOpacity: 0.15, 
+                    weight: 3, 
+                    dashArray: '10,5', 
+                    className: 'circle-glow' 
+                }).addTo(map);
+    
+                const opts = { 
+                    worship: document.getElementById("poiWorship").checked, 
+                    schools: document.getElementById("poiSchools").checked,
+                    colleges: document.getElementById("poiColleges").checked, 
+                    kindergarten: document.getElementById("poiKindergarten").checked,
+                    daycare: document.getElementById("poiDaycare").checked, 
+                    libraries: document.getElementById("poiLibraries").checked,
+                    parks: document.getElementById("poiParks").checked, 
+                    playgrounds: document.getElementById("poiPlaygrounds").checked,
+                    pools: document.getElementById("poiPools").checked, 
+                    busLines: document.getElementById("poiBusLines").checked
+                };
+    
+                const els = await fetchFromOverpass(currentCenter.lat, currentCenter.lon, rad, opts);
+                addPoisToMap(els, rad);
+                
+            } else {
+                alert("Address not found");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error fetching data");
+        } finally {
+            // 2. RESET BUTTON STATE
+            btn.textContent = "Search Area";
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.style.cursor = "pointer";
+        }
     });
 
     document.getElementById("toggleAllBtn").addEventListener("click", (e) => {
