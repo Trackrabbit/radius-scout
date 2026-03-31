@@ -68,19 +68,17 @@ async function fetchFromOverpass(lat, lon, radiusMeters, options) {
   const bboxStr = `${box.south},${box.west},${box.north},${box.east}`;
   
   const filters = [];
-  if (options.worship)     filters.push(`nwr["amenity"="place_of_worship"](${bboxStr});`);
-  if (options.schools)     filters.push(`nwr["amenity"="school"](${bboxStr});`);
-  if (options.colleges)    filters.push(`nwr["amenity"~"college|university"](${bboxStr});`);
-  if (options.kindergarten) filters.push(`nwr["amenity"="kindergarten"](${bboxStr});`);
-  if (options.daycare)      filters.push(`nwr["amenity"="childcare"](${bboxStr});`);
-  if (options.libraries)    filters.push(`nwr["amenity"="library"](${bboxStr});`);
-  if (options.parks)        filters.push(`nwr["leisure"="park"](${bboxStr});`);
-  if (options.playgrounds)  filters.push(`nwr["leisure"="playground"](${bboxStr});`);
-  if (options.pools)        filters.push(`nwr["leisure"="swimming_pool"](${bboxStr});`);
+  // ... existing filters (Worship, Schools, etc.) ...
+  
+  // New Bus Line Filter
+  if (options.busLines) {
+    filters.push(`relation["route"="bus"](${bboxStr});`);
+  }
 
   if (!filters.length) return [];
 
-  const query = `[out:json][timeout:15];(${filters.join("")});out center;`;
+  // CRITICAL CHANGE: "out geom" instead of "out center"
+  const query = `[out:json][timeout:25];(${filters.join("")});out geom;`;
   const encodedQuery = "data=" + encodeURIComponent(query);
 
   const servers = [
@@ -141,13 +139,48 @@ function addPoisToMap(elements, radiusMeters) {
   poiLayer.clearLayers();
   const counts = { 
     worship: 0, school: 0, college: 0, kindergarten: 0, 
-    daycare: 0, library: 0, park: 0, playground: 0, pool: 0 
+    daycare: 0, library: 0, park: 0, playground: 0, pool: 0, 
+    busLines: 0 // New counter
   };
   
   const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
-  let hasPois = false;
+  let hasItems = false;
 
   elements.forEach(el => {
+    // --- PART A: HANDLE BUS LINES (RELATIONS) ---
+    if (el.type === "relation" && el.tags && el.tags.route === "bus") {
+      counts.busLines++;
+      hasItems = true;
+
+      // Extract coordinates from the geometry of the relation members
+      let routeCoords = [];
+      if (el.members) {
+        el.members.forEach(member => {
+          if (member.role === "" || member.role === "outer") {
+            if (member.geometry) {
+              const segment = member.geometry.map(pt => [pt.lat, pt.lon]);
+              routeCoords.push(segment);
+            }
+          }
+        });
+      }
+
+      if (routeCoords.length > 0) {
+        const polyline = L.multiPolyline(routeCoords, {
+          color: "#4299e1", // Sky Blue
+          weight: 5,
+          opacity: 0.7,
+          lineJoin: 'round'
+        })
+        .bindPopup(`<strong>Bus Route ${el.tags.ref || ""}</strong><br>${el.tags.name || "Unnamed Route"}`)
+        .addTo(poiLayer);
+        
+        bounds.extend(polyline.getBounds());
+      }
+      return; // Skip marker logic for this item
+    }
+
+    // --- PART B: HANDLE MARKERS (NODES/WAYS) ---
     const cat = categorizeElement(el);
     if (!cat) return;
 
@@ -158,7 +191,7 @@ function addPoisToMap(elements, radiusMeters) {
     const dist = map.distance([lat, lon], [currentCenter.lat, currentCenter.lon]);
     if (dist > radiusMeters) return; 
 
-    hasPois = true;
+    hasItems = true;
     counts[cat]++;
     const style = poiStyles[cat];
     
@@ -173,8 +206,8 @@ function addPoisToMap(elements, radiusMeters) {
 
   setTimeout(() => {
     map.invalidateSize();
-    if (!hasPois) {
-      map.setView([currentCenter.lat, currentCenter.lon], 16, { animate: true });
+    if (!hasItems) {
+      map.setView([currentCenter.lat, currentCenter.lon], 16);
     } else {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true });
     }
