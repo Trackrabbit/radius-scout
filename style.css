@@ -33,10 +33,58 @@ header h1 { margin: 0; font-size: 1.2rem; color: var(--accent); text-transform: 
 
 #toggleAllBtn { background: none; border: none; color: var(--accent); font-size: 0.65rem; cursor: pointer; text-transform: uppercase; font-weight: bold; }
 
-.button-group { display: flex; gap: 8px; }
-#searchBtn { flex: 2; padding: 0.8rem; background: var(--accent); border: none; font-weight: bold; cursor: pointer; border-radius: 4px; }
-#clearBtn { flex: 1; padding: 0.8rem; background: transparent; border: 1px solid var(--border-subtle); color: var(--text-muted); cursor: pointer; border-radius: 4px; }
+/* --- Buttons --- */
+.button-group {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
 
+#searchBtn {
+  flex: 2;
+  padding: 0.8rem;
+  background: var(--accent);
+  color: var(--bg-main);
+  border: none;
+  border-radius: 6px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.2s;
+}
+
+#searchBtn:hover {
+  background: #3ebcaf; /* Slightly darker teal */
+}
+
+#searchBtn:active {
+  transform: scale(0.98);
+}
+
+#clearBtn {
+  flex: 1;
+  padding: 0.8rem;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease; /* Smooth transition for all properties */
+}
+
+/* Specific hover state for Clear Button */
+#clearBtn:hover {
+  background: var(--bg-panel-alt); /* Lighter dark background */
+  color: #ffffff;                 /* Bright white text */
+  border-color: var(--text-muted); /* Brighter border */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+#clearBtn:active {
+  background: #2d3748;
+  transform: scale(0.98);
+}
 .summary { background: #0d1117; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); }
 .summary.hidden { display: none; }
 .poi-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
