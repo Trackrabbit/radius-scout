@@ -11,6 +11,7 @@ let centerMarker = null;
 let radiusCircle = null;
 let poiLayer = L.layerGroup().addTo(map);
 let currentCenter = null;
+let activeBusLayers = {};
 
 // Expanded Styles to match the new CSS colors
 const poiStyles = {
@@ -144,52 +145,79 @@ function updateSummary(counts) {
 }
 
 function addPoisToMap(elements, radiusMeters) {
+  // 1. Reset everything for the new search
   poiLayer.clearLayers();
+  activeBusLayers = {}; // Clear previous route references
+  
   const counts = { 
     worship: 0, school: 0, college: 0, kindergarten: 0, 
     daycare: 0, library: 0, park: 0, playground: 0, pool: 0, 
-    busLines: 0 // New counter
+    busLines: 0 
   };
+  
+  const routeColors = ["#4fd1c5", "#f6ad55", "#63b3ed", "#f687b3", "#9f7aea", "#fc8181"];
+  let busRouteIndex = 0;
+  let routeLegendHtml = "";
   
   const bounds = L.latLngBounds([currentCenter.lat, currentCenter.lon]);
   let hasItems = false;
 
   elements.forEach(el => {
-    // --- PART A: HANDLE BUS LINES (RELATIONS) ---
+    // --- PART A: BUS ROUTES (RELATIONS) ---
     if (el.type === "relation" && el.tags && el.tags.route === "bus") {
       counts.busLines++;
       hasItems = true;
-    
-      let routeCoords = [];
+
+      const currentColor = routeColors[busRouteIndex % routeColors.length];
+      const isDashed = busRouteIndex % 2 !== 0; 
+      const busRef = el.tags.ref || "Bus";
+      const routeId = `route-${el.id}`; // Create a unique key for this bus line
+
+      // Build Interactive Legend HTML
+      routeLegendHtml += `
+        <div class="legend-route" 
+             onmouseover="highlightRoute('${routeId}')" 
+             onmouseout="unhighlightRoute('${routeId}')"
+             onclick="focusRoute('${routeId}')">
+          <div class="route-line-preview" style="background:${currentColor}; border-top: ${isDashed ? '2px dashed #10131a' : 'none'};"></div>
+          <span class="route-label">${busRef}</span>
+        </div>
+      `;
+      
+      busRouteIndex++;
+
+      let routeSegments = [];
       if (el.members) {
         el.members.forEach(member => {
-          // "outer" or empty roles represent the actual street segments
-          if (member.role === "" || member.role === "outer") {
-            if (member.geometry) {
-              const segment = member.geometry.map(pt => [pt.lat, pt.lon]);
-              routeCoords.push(segment);
-            }
+          if (member.geometry) {
+            routeSegments.push(member.geometry.map(pt => [pt.lat, pt.lon]));
           }
         });
       }
-    
-      if (routeCoords.length > 0) {
-        // CHANGE THIS LINE: from L.multiPolyline to L.polyline
-        const polyline = L.polyline(routeCoords, {
-          color: "#4299e1", // Sky Blue
+
+      if (routeSegments.length > 0) {
+        const busPath = L.polyline(routeSegments, {
+          color: currentColor,
           weight: 5,
-          opacity: 0.7,
-          lineJoin: 'round'
+          opacity: 0.6, // Slightly transparent by default
+          lineJoin: 'round',
+          dashArray: isDashed ? "10, 10" : null
         })
-        .bindPopup(`<strong>Bus Route ${el.tags.ref || ""}</strong><br>${el.tags.name || "Unnamed Route"}`)
+        .bindPopup(`<strong>Bus ${busRef}</strong><br><small>${el.tags.name || ""}</small>`)
         .addTo(poiLayer);
         
-        bounds.extend(polyline.getBounds());
+        // Save the layer reference and its original style for the hover effect
+        activeBusLayers[routeId] = {
+          layer: busPath,
+          originalStyle: { color: currentColor, weight: 5, opacity: 0.6 }
+        };
+
+        bounds.extend(busPath.getBounds());
       }
       return; 
     }
 
-    // --- PART B: HANDLE MARKERS (NODES/WAYS) ---
+    // --- PART B: MARKERS (NODES/WAYS) ---
     const cat = categorizeElement(el);
     if (!cat) return;
 
@@ -211,16 +239,43 @@ function addPoisToMap(elements, radiusMeters) {
     bounds.extend([lat, lon]);
   });
 
-  updateSummary(counts);
+  // 2. Push data to the UI
+  updateSummary(counts, routeLegendHtml);
 
+  // 3. Final view adjustment
   setTimeout(() => {
     map.invalidateSize();
     if (!hasItems) {
-      map.setView([currentCenter.lat, currentCenter.lon], 16);
+      map.setView([currentCenter.lat, currentCenter.lon], 16, { animate: true });
     } else {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, animate: true });
     }
-  }, 100); 
+  }, 150); 
+}
+
+// --- HELPER FUNCTIONS FOR INTERACTION ---
+
+function highlightRoute(routeId) {
+  const data = activeBusLayers[routeId];
+  if (data) {
+    data.layer.setStyle({ weight: 10, opacity: 1.0 });
+    data.layer.bringToFront(); 
+  }
+}
+
+function unhighlightRoute(routeId) {
+  const data = activeBusLayers[routeId];
+  if (data) {
+    data.layer.setStyle(data.originalStyle);
+  }
+}
+
+function focusRoute(routeId) {
+  const data = activeBusLayers[routeId];
+  if (data) {
+    map.fitBounds(data.layer.getBounds(), { padding: [40, 40], animate: true });
+    data.layer.openPopup();
+  }
 }
 
 // UI Selectors
