@@ -115,6 +115,13 @@ function unhighlightRoute(id) { if(activeBusLayers[id]) { activeBusLayers[id].la
 
 // --- EVENTS ---
 function setupEventListeners() {
+
+    document.querySelector('.checkbox-grid').addEventListener('change', () => {
+        const cbs = document.querySelectorAll(".checkbox-grid input");
+        const all = Array.from(cbs).every(c => c.checked);
+        document.getElementById("toggleAllBtn").textContent = all ? "Deselect All" : "Select All";
+    });
+    
     document.getElementById("searchBtn").addEventListener("click", async () => {
         const addr = document.getElementById("addressInput").value;
         const rad = parseInt(document.getElementById("radiusSelect").value);
