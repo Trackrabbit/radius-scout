@@ -56,3 +56,7 @@ header h1 { margin: 0; font-size: 1.2rem; color: var(--accent); text-transform: 
 path.bus-route-glow { filter: drop-shadow(0 0 4px currentColor); transition: stroke-width 0.3s; }
 path.circle-glow { filter: drop-shadow(0 0 5px #4fd1c5); animation: pulse 3s infinite; }
 @keyframes pulse { 0%, 100% { stroke-opacity: 0.4; } 50% { stroke-opacity: 1; } }
+
+.leaflet-overlay-pane svg {
+    overflow: visible !important;
+}
