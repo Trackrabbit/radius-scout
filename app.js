@@ -1,14 +1,5 @@
-// --- Globals ---
-const map = L.map("map").setView([32.8407, -83.6324], 13);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap",
-    className: 'map-tiles'
-}).addTo(map);
-
-let centerMarker = null;
-let radiusCircle = null;
-let poiLayer = L.layerGroup().addTo(map);
-let currentCenter = null;
+// --- GLOBAL VARIABLES ---
+let map, poiLayer, centerMarker, radiusCircle, currentCenter;
 let activeBusLayers = {}; 
 
 const poiStyles = {
@@ -21,16 +12,26 @@ const poiStyles = {
     park: { color: "#48bb78", label: "Park" },
     playground: { color: "#38b2ac", label: "Playground" },
     pool: { color: "#4299e1", label: "Pool" },
-    busLines: { color: "#00ffff", label: "Bus Route" }
+    busLines: { color: "#00ffff", label: "Bus" }
 };
 
 const routeColors = ["#00ffff", "#7fff00", "#ff00ff", "#ff4500", "#ffff00", "#00ff7f"];
 
-// --- Helpers ---
+// --- INITIALIZE MAP ---
+function init() {
+    map = L.map("map").setView([32.8407, -83.6324], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap"
+    }).addTo(map);
+    
+    poiLayer = L.layerGroup().addTo(map);
+}
+
+// --- LOGIC ---
 function createPoiIcon(color) {
     return L.divIcon({
         className: "custom-icon",
-        html: `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:2px solid black;"></div>`,
+        html: `<div style="background:${color}; width:12px; height:12px; border-radius:50%; border:1px solid black;"></div>`,
         iconSize: [12, 12]
     });
 }
@@ -50,16 +51,16 @@ function categorizeElement(el) {
     return null;
 }
 
-// --- Core Logic ---
 async function fetchFromOverpass(lat, lon, radius, options) {
     const offset = radius / 111320;
     const b = `${lat-offset},${lon-offset},${lat+offset},${lon+offset}`;
     let queries = [];
     if (options.worship) queries.push(`nwr["amenity"="place_of_worship"](${b});`);
     if (options.schools) queries.push(`nwr["amenity"="school"](${b});`);
+    if (options.colleges) queries.push(`nwr["amenity"~"college|university"](${b});`);
     if (options.busLines) queries.push(`relation["route"="bus"](${b});`);
-    // ... add other options as needed ...
-
+    // Add others as needed
+    
     const query = `[out:json][timeout:25];(${queries.join("")});out geom;`;
     const res = await fetch("https://overpass-api.de/api/interpreter", {
         method: "POST",
@@ -104,38 +105,73 @@ function addPoisToMap(elements, radiusMeters) {
     });
 
     updateSummary(counts, legendHtml);
-    map.fitBounds(bounds, { padding: [30, 30] });
+    if(bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] });
 }
 
 function updateSummary(counts, legend) {
-    document.getElementById("countBusLines").textContent = counts.busLines;
-    // ... add other textContent updates ...
+    const mapping = { worship:"countWorship", school:"countSchools", college:"countColleges", kindergarten:"countKindergarten", daycare:"countDaycare", library:"countLibraries", park:"countParks", playground:"countPlaygrounds", pool:"countPools", busLines:"countBusLines" };
+    Object.keys(mapping).forEach(k => {
+        const el = document.getElementById(mapping[k]);
+        if(el) el.textContent = counts[k] || 0;
+    });
+    
     const leg = document.getElementById("busLegend");
-    leg.innerHTML = legend;
-    document.getElementById("transitLegend").style.display = legend ? "block" : "none";
+    const legWrap = document.getElementById("transitLegend");
+    if(leg) leg.innerHTML = legend;
+    if(legWrap) legWrap.style.display = legend ? "block" : "none";
     document.getElementById("summaryPopup").classList.remove("hidden");
 }
 
 function highlightRoute(id) { if(activeBusLayers[id]) activeBusLayers[id].layer.setStyle({weight:12, opacity:1}).bringToFront(); }
 function unhighlightRoute(id) { if(activeBusLayers[id]) activeBusLayers[id].layer.setStyle(activeBusLayers[id].style); }
 
-// --- UI Events ---
-document.getElementById("searchBtn").addEventListener("click", async () => {
-    const addr = document.getElementById("addressInput").value;
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${addr}`);
-    const data = await res.json();
-    if(data.length > 0) {
-        currentCenter = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-        map.setView([currentCenter.lat, currentCenter.lon], 15);
-        const els = await fetchFromOverpass(currentCenter.lat, currentCenter.lon, 305, { busLines: true, worship: true, schools: true });
-        addPoisToMap(els, 305);
-    }
-});
+// --- UI EVENTS ---
+document.addEventListener("DOMContentLoaded", () => {
+    init();
 
-// Smart Toggle
-document.getElementById("toggleAllBtn").addEventListener("click", (e) => {
-    const cbs = document.querySelectorAll(".checkbox-grid input");
-    const all = Array.from(cbs).every(c => c.checked);
-    cbs.forEach(c => c.checked = !all);
-    e.target.textContent = all ? "Select All" : "Deselect All";
+    document.getElementById("searchBtn").addEventListener("click", async () => {
+        const addr = document.getElementById("addressInput").value;
+        if(!addr) return alert("Please enter an address");
+        
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
+            const data = await res.json();
+            if(data.length > 0) {
+                currentCenter = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+                
+                if(centerMarker) map.removeLayer(centerMarker);
+                centerMarker = L.marker([currentCenter.lat, currentCenter.lon]).addTo(map).bindPopup("Center");
+                
+                const radVal = parseInt(document.getElementById("radiusSelect").value);
+                const options = { 
+                    busLines: document.getElementById("poiBusLines").checked,
+                    worship: document.getElementById("poiWorship").checked,
+                    schools: document.getElementById("poiSchools").checked,
+                    colleges: document.getElementById("poiColleges").checked
+                };
+                
+                const els = await fetchFromOverpass(currentCenter.lat, currentCenter.lon, radVal, options);
+                addPoisToMap(els, radVal);
+            } else {
+                alert("Address not found");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error fetching data");
+        }
+    });
+
+    document.getElementById("toggleAllBtn").addEventListener("click", (e) => {
+        const cbs = document.querySelectorAll(".checkbox-grid input");
+        const all = Array.from(cbs).every(c => c.checked);
+        cbs.forEach(c => c.checked = !all);
+        e.target.textContent = all ? "Select All" : "Deselect All";
+    });
+    
+    document.getElementById("clearBtn").addEventListener("click", () => {
+        poiLayer.clearLayers();
+        if(centerMarker) map.removeLayer(centerMarker);
+        document.getElementById("summaryPopup").classList.add("hidden");
+        document.getElementById("addressInput").value = "";
+    });
 });
