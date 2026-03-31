@@ -42,7 +42,11 @@
       </div>
 
       <div class="form-row checkbox-row">
-        <span>POI Types:</span>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>POI Types:</span>
+          <button id="toggleAllBtn" type="button" style="background:none; border:none; color:var(--accent); font-size:0.7rem; cursor:pointer; text-transform:uppercase;">Deselect All</button>
+        </div>
+        
         <div class="checkbox-grid">
           <label><input type="checkbox" id="poiWorship" checked /> Worship</label>
           <label><input type="checkbox" id="poiSchools" checked /> Schools</label>
@@ -53,6 +57,7 @@
           <label><input type="checkbox" id="poiParks" checked /> Parks</label>
           <label><input type="checkbox" id="poiPlaygrounds" checked /> Playgrounds</label>
           <label><input type="checkbox" id="poiPools" checked /> Pools</label>
+          <label><input type="checkbox" id="poiBusLines" checked /> Bus Lines</label>
         </div>
       </div>
 
@@ -73,6 +78,7 @@
           <div class="summary-item">Parks: <span id="countParks">0</span></div>
           <div class="summary-item">Playgrounds: <span id="countPlaygrounds">0</span></div>
           <div class="summary-item">Pools: <span id="countPools">0</span></div>
+          <div class="summary-item">Bus Lines: <span id="countBusLines">0</span></div>
         </div>
       </div>
 
