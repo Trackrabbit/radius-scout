@@ -36,6 +36,16 @@ header h1 { margin: 0; font-size: 1.2rem; color: var(--accent); text-transform: 
 #clearBtn { flex: 1; padding: 0.8rem; background: transparent; border: 1px solid var(--border-subtle); color: var(--text-muted); cursor: pointer; border-radius: 4px; transition: all 0.2s; }
 #clearBtn:hover { background: var(--bg-panel-alt); color: white; border-color: white; }
 
+#searchBtn:disabled {
+    animation: btn-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes btn-pulse {
+    0% { background-color: var(--accent); }
+    50% { background-color: #319795; } /* Slightly darker teal */
+    100% { background-color: var(--accent); }
+}
+
 /* Summary & Legend */
 .summary { background: #0d1117; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); }
 .summary.hidden { display: none; }
