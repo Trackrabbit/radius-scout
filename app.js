@@ -137,15 +137,15 @@ function addPoisToMap(elements, radiusMeters) {
 
     // 3. ZOOM LOGIC (The Fix)
     if (hasItems) {
-        // If we found things, zoom to fit them all with some breathing room
         map.fitBounds(bounds, { 
-            padding: [50, 50], 
-            maxZoom: 16, 
-            animate: true 
+            padding: [40, 40], 
+            maxZoom: 18,       // INCREASED: Zooms in much further
+            animate: true,
+            duration: 1.5      // Smoother, slower zoom-in effect
         });
     } else {
-        // If nothing found, just zoom in on the center point
-        map.setView([currentCenter.lat, currentCenter.lon], 16, { animate: true });
+        // If nothing found, go straight to the center at high zoom
+        map.setView([currentCenter.lat, currentCenter.lon], 18, { animate: true });
     }
 }
 
@@ -194,13 +194,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 // 3. DRAW RADIUS CIRCLE
                 radiusCircle = L.circle([currentCenter.lat, currentCenter.lon], {
                     radius: radVal,
-                    color: 'var(--accent)',      // Teal border
-                    fillColor: 'var(--accent)',  // Teal fill
-                    fillOpacity: 0.1,            // Very light so you can see the map
-                    weight: 1,                   // Thin border
-                    dashArray: '5, 5',           // Dashed line
-                    interactive: false           // Clicks go through to the map
+                    color: '#4fd1c5',        // Bright Teal
+                    fillColor: '#4fd1c5',    // Matches the accent
+                    fillOpacity: 0.15,       // Slightly more visible fill
+                    weight: 3,               // Thicker border
+                    dashArray: '10, 5',      // Longer dashes for a "radar" look
+                    lineCap: 'round',
+                    interactive: false
                 }).addTo(map);
+                
+                // Add a "Glow" effect to the circle using a CSS class
+                radiusCircle.getElement().classList.add('circle-glow');
                 
                 // 4. Fetch and Add POIs
                 const options = { 
