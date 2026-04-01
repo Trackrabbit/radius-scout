@@ -25,22 +25,23 @@ function setupEvents() {
     const searchBtn = document.getElementById("searchBtn");
     
     searchBtn.addEventListener("click", async () => {
-        const addr = document.getElementById("addressInput").value;
+        const addrInput = document.getElementById("addressInput");
+        const addr = addrInput.value.trim();
         const rad = parseInt(document.getElementById("radiusSelect").value);
         if (!addr) return alert("Please enter an address");
 
-        // UI Feedback
         searchBtn.textContent = "Searching...";
         searchBtn.disabled = true;
 
         try {
-            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
+            // Cache buster for geocoding
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&cb=${Date.now()}`);
             const geoData = await geoRes.json();
-            if (!geoData.length) throw new Error("Address not found");
+            if (!geoData || !geoData.length) throw new Error("Address not found. Please try a more specific address in Macon, GA.");
 
             currentCenter = { lat: parseFloat(geoData[0].lat), lon: parseFloat(geoData[0].lon) };
             
-            // Map Reset
+            // Clean UI
             if (centerMarker) map.removeLayer(centerMarker);
             if (radiusCircle) map.removeLayer(radiusCircle);
             poiLayer.clearLayers();
@@ -67,7 +68,7 @@ function setupEvents() {
             renderResults(els, rad);
 
         } catch (e) {
-            alert(`Error: ${e.message}`);
+            alert(e.message);
         } finally {
             searchBtn.textContent = "Search Area";
             searchBtn.disabled = false;
@@ -86,6 +87,7 @@ function setupEvents() {
         if (centerMarker) map.removeLayer(centerMarker);
         if (radiusCircle) map.removeLayer(radiusCircle);
         document.getElementById("summaryPopup").classList.add("hidden");
+        document.getElementById("addressInput").value = "";
     });
 }
 
@@ -105,10 +107,29 @@ async function fetchOverpass(lat, lon, radius, opts) {
     if (opts.busLines) q.push(`relation["route"="bus"](${b});`);
 
     if (!q.length) return [];
-    const query = `[out:json][timeout:60];(${q.join("")});out geom;`;
-    const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(query) });
-    const data = await res.json();
-    return data.elements || [];
+    
+    // Add cache buster to the query string to avoid server caching of errors
+    const query = `[out:json][timeout:90];(${q.join("")});out geom;`;
+    
+    try {
+        const res = await fetch(`https://overpass-api.de/api/interpreter?cb=${Date.now()}`, { 
+            method: "POST", 
+            body: "data=" + encodeURIComponent(query) 
+        });
+
+        const contentType = res.headers.get("content-type");
+        if (!res.ok || !contentType || !contentType.includes("application/json")) {
+            throw new Error("The map server returned an invalid response. This often happens if the area is too data-heavy. Try unchecking 'Bus Lines' or decreasing the radius.");
+        }
+
+        const data = await res.json();
+        return data.elements || [];
+    } catch (err) {
+        if (err.name === 'SyntaxError') {
+             throw new Error("Received malformed data from the server. Try a smaller radius.");
+        }
+        throw err;
+    }
 }
 
 function renderResults(elements, rad) {
@@ -139,11 +160,15 @@ function renderResults(elements, rad) {
     });
 
     const ids = { worship:"countWorship", school:"countSchools", college:"countColleges", kindergarten:"countKindergarten", daycare:"countDaycare", library:"countLibraries", park:"countParks", playground:"countPlaygrounds", pool:"countPools", busLines:"countBusLines" };
-    Object.keys(ids).forEach(k => document.getElementById(ids[k]).textContent = counts[k]);
+    Object.keys(ids).forEach(k => {
+        const span = document.getElementById(ids[k]);
+        if (span) span.textContent = counts[k];
+    });
+    
     document.getElementById("busLegend").innerHTML = legendHtml;
     document.getElementById("transitLegend").style.display = legendHtml ? "block" : "none";
     document.getElementById("summaryPopup").classList.remove("hidden");
-    map.setView([currentCenter.lat, currentCenter.lon], 17);
+    map.setView([currentCenter.lat, currentCenter.lon], 18);
 }
 
 function categorize(el) {
