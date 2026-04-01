@@ -69,18 +69,23 @@ async function fetchOverpass(lat, lon, radius, opts) {
 }
 
 function updateMapStyle() {
-    // 1. Remove the old layer so they don't stack and slow down the browser
+    // 1. Safety check: make sure map is initialized
+    if (!map) return;
+
+    // 2. Remove the old layer
     if (baseTileLayer) map.removeLayer(baseTileLayer);
 
-    // 2. Add the new layer based on the current index
+    // 3. Add the new layer
     baseTileLayer = L.tileLayer(styles[styleIndex].url, {
         attribution: '&copy; OpenStreetMap &copy; CARTO'
     }).addTo(map);
 
-    // 3. Update the button text to show what the NEXT click will do
+    // 4. Update the button text safely
     const nextIndex = (styleIndex + 1) % styles.length;
     const btn = document.getElementById("mapStyleToggle");
-    if (btn) btn.textContent = `Next Style: ${styles[nextIndex].name}`;
+    if (btn) {
+        btn.textContent = `Next Style: ${styles[nextIndex].name}`;
+    }
 }
 
 function renderResults(elements, rad) {
@@ -160,12 +165,18 @@ function categorize(el) {
 
 function setupEvents() {
     const searchBtn = document.getElementById("searchBtn");
+    const styleBtn = document.getElementById("mapStyleToggle");
 
     // --- MAP STYLE CYCLE EVENT ---
-    document.getElementById("mapStyleToggle").addEventListener("click", () => {
-        styleIndex = (styleIndex + 1) % styles.length;
-        updateMapStyle();
-    });
+    if (styleBtn) {
+        styleBtn.addEventListener("click", () => {
+            console.log("Style button clicked!"); // Check your console (F12) for this
+            styleIndex = (styleIndex + 1) % styles.length;
+            updateMapStyle();
+        });
+    } else {
+        console.error("Could not find button with ID: mapStyleToggle");
+    }
     
     searchBtn.addEventListener("click", async () => {
         const addrInput = document.getElementById("addressInput");
