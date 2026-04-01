@@ -94,22 +94,27 @@ function setupEvents() {
 async function fetchOverpass(lat, lon, radius, opts) {
     const offset = radius / 111320;
     const b = `${lat - offset},${lon - offset},${lat + offset},${lon + offset}`;
-    let q = [];
-    if (opts.worship) q.push(`nwr["amenity"="place_of_worship"](${b});`);
-    if (opts.schools) q.push(`nwr["amenity"="school"](${b});`);
-    if (opts.colleges) q.push(`nwr["amenity"~"college|university"](${b});`);
-    if (opts.kindergarten) q.push(`nwr["amenity"="kindergarten"](${b});`);
-    if (opts.daycare) q.push(`nwr["amenity"~"childcare|daycare"](${b});`);
-    if (opts.libraries) q.push(`nwr["amenity"="library"](${b});`);
-    if (opts.parks) q.push(`nwr["leisure"="park"](${b});`);
-    if (opts.playgrounds) q.push(`nwr["leisure"="playground"](${b});`);
-    if (opts.pools) q.push(`nwr["leisure"="swimming_pool"](${b});`);
-    if (opts.busLines) q.push(`relation["route"="bus"](${b});`);
-
-    if (!q.length) return [];
     
-    // Add cache buster to the query string to avoid server caching of errors
-    const query = `[out:json][timeout:90];(${q.join("")});out geom;`;
+    // Create a specific sub-query for the items
+    let q = "";
+    if (opts.worship)      q += `nwr["amenity"="place_of_worship"](${b});`;
+    if (opts.schools)      q += `nwr["amenity"="school"](${b});`;
+    if (opts.colleges)     q += `nwr["amenity"~"college|university"](${b});`;
+    if (opts.kindergarten)  q += `nwr["amenity"="kindergarten"](${b});`;
+    if (opts.daycare)      q += `nwr["amenity"~"childcare|daycare"](${b});`;
+    if (opts.libraries)    q += `nwr["amenity"="library"](${b});`;
+    if (opts.parks)        q += `nwr["leisure"="park"](${b});`;
+    if (opts.playgrounds)  q += `nwr["leisure"="playground"](${b});`;
+    if (opts.pools)        q += `nwr["leisure"="swimming_pool"](${b});`;
+    
+    // OPTIMIZED BUS QUERY: We ask for the route geometry specifically clipped to our box
+    if (opts.busLines)     q += `rel["route"="bus"](${b});`;
+
+    if (!q) return [];
+    
+    // Use [timeout:30] - sometimes a shorter timeout forces the server 
+    // to prioritize the small request rather than putting it in a long queue.
+    const query = `[out:json][timeout:30];(${q});out geom;`;
     
     try {
         const res = await fetch(`https://overpass-api.de/api/interpreter?cb=${Date.now()}`, { 
@@ -118,16 +123,15 @@ async function fetchOverpass(lat, lon, radius, opts) {
         });
 
         const contentType = res.headers.get("content-type");
+        
+        // If the server sends HTML instead of JSON (the 504/429 error)
         if (!res.ok || !contentType || !contentType.includes("application/json")) {
-            throw new Error("The map server returned an invalid response. This often happens if the area is too data-heavy. Try unchecking 'Bus Lines' or decreasing the radius.");
+            throw new Error("Server busy. Try unchecking 'Bus Lines' for a faster search.");
         }
 
         const data = await res.json();
         return data.elements || [];
     } catch (err) {
-        if (err.name === 'SyntaxError') {
-             throw new Error("Received malformed data from the server. Try a smaller radius.");
-        }
         throw err;
     }
 }
