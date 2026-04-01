@@ -3,10 +3,19 @@ let activeBusLayers = {};
 // --- NEW GLOBALS FOR CYCLING ---
 let styleIndex = 0;
 let baseTileLayer;
+
 const styles = [
     { name: "Neon Dark", url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' },
     { name: "Soft Light", url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' },
     { name: "Street Detail", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' }
+];
+
+// List of reliable global Overpass mirrors
+const overpassEndpoints = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter",
+    "https://z.overpass-api.de/api/interpreter"
 ];
 
 const poiStyles = {
@@ -20,6 +29,7 @@ const poiStyles = {
     playground: { color: "#38b2ac", label: "Playground" },
     pool: { color: "#4299e1", label: "Pool" }
 };
+
 const routeColors = ["#00ffff", "#7fff00", "#ff00ff", "#ff4500", "#ffff00", "#00ff7f"];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -38,6 +48,8 @@ async function fetchOverpass(lat, lon, radius, opts) {
     const offset = radius / 111320;
     const b = `${lat - offset},${lon - offset},${lat + offset},${lon + offset}`;
     let q = [];
+    
+    // Add POIs
     if (opts.worship) q.push(`nwr["amenity"="place_of_worship"](${b});`);
     if (opts.schools) q.push(`nwr["amenity"="school"](${b});`);
     if (opts.colleges) q.push(`nwr["amenity"~"college|university"](${b});`);
@@ -50,22 +62,28 @@ async function fetchOverpass(lat, lon, radius, opts) {
     if (opts.busLines) q.push(`relation["route"="bus"](${b});`);
 
     if (!q.length) return [];
-    
-    // Use [out:json][timeout:90][adiff:false]; to ensure clean data delivery
-    const query = `[out:json][timeout:90];(${q.join("")});out center geom;`;
-    
-    try {
-        const res = await fetch(`https://overpass-api.de/api/interpreter?cb=${Date.now()}`, { 
-            method: "POST", 
-            body: "data=" + encodeURIComponent(query) 
-        });
+    const query = `[out:json][timeout:60];(${q.join("")});out center geom;`;
 
-        if (!res.ok) throw new Error("Server overloaded. Try a smaller radius or fewer POI types.");
-        const data = await res.json();
-        return data.elements || [];
-    } catch (err) {
-        throw err;
+    // Try each endpoint until one works
+    for (let endpoint of overpassEndpoints) {
+        try {
+            console.log(`Trying server: ${endpoint}`);
+            const res = await fetch(`${endpoint}?cb=${Date.now()}`, { 
+                method: "POST", 
+                body: "data=" + encodeURIComponent(query) 
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                return data.elements || [];
+            }
+        } catch (err) {
+            console.warn(`Server ${endpoint} failed, trying next...`);
+            continue; // Move to the next server in the list
+        }
     }
+
+    throw new Error("All map servers are currently busy. Please wait 1 minute and try again.");
 }
 
 function updateMapStyle() {
