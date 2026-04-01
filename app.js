@@ -21,6 +21,115 @@ document.addEventListener("DOMContentLoaded", () => {
     setupEvents();
 });
 
+async function fetchOverpass(lat, lon, radius, opts) {
+    const offset = radius / 111320;
+    const b = `${lat - offset},${lon - offset},${lat + offset},${lon + offset}`;
+    let q = [];
+    if (opts.worship) q.push(`nwr["amenity"="place_of_worship"](${b});`);
+    if (opts.schools) q.push(`nwr["amenity"="school"](${b});`);
+    if (opts.colleges) q.push(`nwr["amenity"~"college|university"](${b});`);
+    if (opts.kindergarten) q.push(`nwr["amenity"="kindergarten"](${b});`);
+    if (opts.daycare) q.push(`nwr["amenity"~"childcare|daycare"](${b});`);
+    if (opts.libraries) q.push(`nwr["amenity"="library"](${b});`);
+    if (opts.parks) q.push(`nwr["leisure"="park"](${b});`);
+    if (opts.playgrounds) q.push(`nwr["leisure"="playground"](${b});`);
+    if (opts.pools) q.push(`nwr["leisure"="swimming_pool"](${b});`);
+    if (opts.busLines) q.push(`relation["route"="bus"](${b});`);
+
+    if (!q.length) return [];
+    
+    // Use [out:json][timeout:90][adiff:false]; to ensure clean data delivery
+    const query = `[out:json][timeout:90];(${q.join("")});out center geom;`;
+    
+    try {
+        const res = await fetch(`https://overpass-api.de/api/interpreter?cb=${Date.now()}`, { 
+            method: "POST", 
+            body: "data=" + encodeURIComponent(query) 
+        });
+
+        if (!res.ok) throw new Error("Server overloaded. Try a smaller radius or fewer POI types.");
+        const data = await res.json();
+        return data.elements || [];
+    } catch (err) {
+        throw err;
+    }
+}
+
+function renderResults(elements, rad) {
+    activeBusLayers = {};
+    const counts = { worship:0, school:0, college:0, kindergarten:0, daycare:0, library:0, park:0, playground:0, pool:0, busLines:0 };
+    let busIdx = 0, legendHtml = "";
+
+    elements.forEach(el => {
+        // --- BUS LOGIC ---
+        if (el.type === "relation" && el.tags.route === "bus") {
+            counts.busLines++;
+            const color = routeColors[busIdx % routeColors.length], rid = `r-${el.id}`;
+            legendHtml += `<div class="legend-route" onmouseover="highlight('${rid}')" onmouseout="unhighlight('${rid}')">
+                <div class="route-line-preview" style="background:${color}"></div>
+                <span class="route-label">${el.tags.ref || 'Bus'}</span>
+            </div>`;
+            busIdx++;
+            let coords = el.members.filter(m => m.geometry).map(m => m.geometry.map(p => [p.lat, p.lon]));
+            const poly = L.polyline(coords, { color: color, weight: 6, opacity: 0.5, className: 'bus-route-glow' }).addTo(poiLayer);
+            activeBusLayers[rid] = { layer: poly, style: { weight: 6, opacity: 0.5 } };
+        } 
+        // --- POI LOGIC (The Fix for 'lat' of undefined) ---
+        else {
+            const cat = categorize(el);
+            if (!cat) return;
+
+            // Determine position: Check el.lat/lon, then el.center.lat/lon (for areas/polygons)
+            let pos = null;
+            if (el.lat && el.lon) {
+                pos = [el.lat, el.lon];
+            } else if (el.center && el.center.lat && el.center.lon) {
+                pos = [el.center.lat, el.center.lon];
+            }
+
+            // Safety skip if no coordinates were found at all
+            if (!pos) return;
+
+            if (map.distance(pos, [currentCenter.lat, currentCenter.lon]) > rad) return;
+            
+            counts[cat]++;
+            L.marker(pos, { 
+                icon: L.divIcon({ 
+                    html: `<div style="background:${poiStyles[cat].color}; width:10px; height:10px; border-radius:50%; border:1px solid black;"></div>`, 
+                    iconSize:[10,10], 
+                    className:'' 
+                }) 
+            }).bindPopup(`<strong>${poiStyles[cat].label}</strong><br>${el.tags.name || "Unnamed"}`).addTo(poiLayer);
+        }
+    });
+
+    // Update UI spans
+    const ids = { worship:"countWorship", school:"countSchools", college:"countColleges", kindergarten:"countKindergarten", daycare:"countDaycare", library:"countLibraries", park:"countParks", playground:"countPlaygrounds", pool:"countPools", busLines:"countBusLines" };
+    Object.keys(ids).forEach(k => {
+        const span = document.getElementById(ids[k]);
+        if (span) span.textContent = counts[k];
+    });
+    
+    document.getElementById("busLegend").innerHTML = legendHtml;
+    document.getElementById("transitLegend").style.display = legendHtml ? "block" : "none";
+    document.getElementById("summaryPopup").classList.remove("hidden");
+    map.setView([currentCenter.lat, currentCenter.lon], 18);
+}
+
+function categorize(el) {
+    const t = el.tags; if (!t) return null;
+    if (t.amenity === "place_of_worship") return "worship";
+    if (t.amenity === "school") return "school";
+    if (t.amenity === "university" || t.amenity === "college") return "college";
+    if (t.amenity === "kindergarten") return "kindergarten";
+    if (t.amenity === "childcare" || t.amenity === "daycare") return "daycare";
+    if (t.amenity === "library") return "library";
+    if (t.leisure === "park") return "park";
+    if (t.leisure === "playground") return "playground";
+    if (t.leisure === "swimming_pool") return "pool";
+    return null;
+}
+
 function setupEvents() {
     const searchBtn = document.getElementById("searchBtn");
     
@@ -34,14 +143,12 @@ function setupEvents() {
         searchBtn.disabled = true;
 
         try {
-            // Cache buster for geocoding
             const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&cb=${Date.now()}`);
             const geoData = await geoRes.json();
-            if (!geoData || !geoData.length) throw new Error("Address not found. Please try a more specific address in Macon, GA.");
+            if (!geoData || !geoData.length) throw new Error("Address not found.");
 
             currentCenter = { lat: parseFloat(geoData[0].lat), lon: parseFloat(geoData[0].lon) };
             
-            // Clean UI
             if (centerMarker) map.removeLayer(centerMarker);
             if (radiusCircle) map.removeLayer(radiusCircle);
             poiLayer.clearLayers();
@@ -89,104 +196,6 @@ function setupEvents() {
         document.getElementById("summaryPopup").classList.add("hidden");
         document.getElementById("addressInput").value = "";
     });
-}
-
-async function fetchOverpass(lat, lon, radius, opts) {
-    const offset = radius / 111320;
-    const b = `${lat - offset},${lon - offset},${lat + offset},${lon + offset}`;
-    
-    // Create a specific sub-query for the items
-    let q = "";
-    if (opts.worship)      q += `nwr["amenity"="place_of_worship"](${b});`;
-    if (opts.schools)      q += `nwr["amenity"="school"](${b});`;
-    if (opts.colleges)     q += `nwr["amenity"~"college|university"](${b});`;
-    if (opts.kindergarten)  q += `nwr["amenity"="kindergarten"](${b});`;
-    if (opts.daycare)      q += `nwr["amenity"~"childcare|daycare"](${b});`;
-    if (opts.libraries)    q += `nwr["amenity"="library"](${b});`;
-    if (opts.parks)        q += `nwr["leisure"="park"](${b});`;
-    if (opts.playgrounds)  q += `nwr["leisure"="playground"](${b});`;
-    if (opts.pools)        q += `nwr["leisure"="swimming_pool"](${b});`;
-    
-    // OPTIMIZED BUS QUERY: We ask for the route geometry specifically clipped to our box
-    if (opts.busLines)     q += `rel["route"="bus"](${b});`;
-
-    if (!q) return [];
-    
-    // Use [timeout:30] - sometimes a shorter timeout forces the server 
-    // to prioritize the small request rather than putting it in a long queue.
-    const query = `[out:json][timeout:30];(${q});out geom;`;
-    
-    try {
-        const res = await fetch(`https://overpass-api.de/api/interpreter?cb=${Date.now()}`, { 
-            method: "POST", 
-            body: "data=" + encodeURIComponent(query) 
-        });
-
-        const contentType = res.headers.get("content-type");
-        
-        // If the server sends HTML instead of JSON (the 504/429 error)
-        if (!res.ok || !contentType || !contentType.includes("application/json")) {
-            throw new Error("Server busy. Try unchecking 'Bus Lines' for a faster search.");
-        }
-
-        const data = await res.json();
-        return data.elements || [];
-    } catch (err) {
-        throw err;
-    }
-}
-
-function renderResults(elements, rad) {
-    activeBusLayers = {};
-    const counts = { worship:0, school:0, college:0, kindergarten:0, daycare:0, library:0, park:0, playground:0, pool:0, busLines:0 };
-    let busIdx = 0, legendHtml = "";
-
-    elements.forEach(el => {
-        if (el.type === "relation" && el.tags.route === "bus") {
-            counts.busLines++;
-            const color = routeColors[busIdx % routeColors.length], rid = `r-${el.id}`;
-            legendHtml += `<div class="legend-route" onmouseover="highlight('${rid}')" onmouseout="unhighlight('${rid}')">
-                <div class="route-line-preview" style="background:${color}"></div>
-                <span class="route-label">${el.tags.ref || 'Bus'}</span>
-            </div>`;
-            busIdx++;
-            let coords = el.members.filter(m => m.geometry).map(m => m.geometry.map(p => [p.lat, p.lon]));
-            const poly = L.polyline(coords, { color: color, weight: 6, opacity: 0.5, className: 'bus-route-glow' }).addTo(poiLayer);
-            activeBusLayers[rid] = { layer: poly, style: { weight: 6, opacity: 0.5 } };
-        } else {
-            const cat = categorize(el);
-            if (!cat) return;
-            const pos = [el.lat || el.center.lat, el.lon || el.center.lon];
-            if (map.distance(pos, [currentCenter.lat, currentCenter.lon]) > rad) return;
-            counts[cat]++;
-            L.marker(pos, { icon: L.divIcon({ html: `<div style="background:${poiStyles[cat].color}; width:10px; height:10px; border-radius:50%; border:1px solid black;"></div>`, iconSize:[10,10], className:'' }) }).addTo(poiLayer);
-        }
-    });
-
-    const ids = { worship:"countWorship", school:"countSchools", college:"countColleges", kindergarten:"countKindergarten", daycare:"countDaycare", library:"countLibraries", park:"countParks", playground:"countPlaygrounds", pool:"countPools", busLines:"countBusLines" };
-    Object.keys(ids).forEach(k => {
-        const span = document.getElementById(ids[k]);
-        if (span) span.textContent = counts[k];
-    });
-    
-    document.getElementById("busLegend").innerHTML = legendHtml;
-    document.getElementById("transitLegend").style.display = legendHtml ? "block" : "none";
-    document.getElementById("summaryPopup").classList.remove("hidden");
-    map.setView([currentCenter.lat, currentCenter.lon], 18);
-}
-
-function categorize(el) {
-    const t = el.tags; if (!t) return null;
-    if (t.amenity === "place_of_worship") return "worship";
-    if (t.amenity === "school") return "school";
-    if (t.amenity === "university" || t.amenity === "college") return "college";
-    if (t.amenity === "kindergarten") return "kindergarten";
-    if (t.amenity === "childcare" || t.amenity === "daycare") return "daycare";
-    if (t.amenity === "library") return "library";
-    if (t.leisure === "park") return "park";
-    if (t.leisure === "playground") return "playground";
-    if (t.leisure === "swimming_pool") return "pool";
-    return null;
 }
 
 function highlight(id) { if (activeBusLayers[id]) activeBusLayers[id].layer.setStyle({ weight: 12, opacity: 1 }).bringToFront(); }
