@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radius Scout | Transit & POI</title>
+    <title>Radius Scout | POI & Transit</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
 </head>
@@ -20,6 +20,7 @@
                 <select id="radiusSelect">
                     <option value="152">500 ft</option>
                     <option value="305" selected>1000 ft</option>
+                    <option value="1609">1 mile</option>
                 </select>
             </div>
             <div class="form-row">
@@ -40,16 +41,13 @@
                     <label><input type="checkbox" id="poiBusLines" checked> Bus Lines</label>
                 </div>
             </div>
-            <div class="form-row">
-                <button id="mapStyleToggle" class="secondary-btn">Switch to Light Map</button>
-            </div>
             <div class="button-group">
                 <button id="searchBtn">Search Area</button>
                 <button id="clearBtn">Clear</button>
             </div>
             <div id="summaryPopup" class="summary hidden">
                 <h3>Summary</h3>
-                <div class="poi-summary-grid" id="summaryGrid">
+                <div class="poi-summary-grid">
                     <div class="summary-item">Buses: <span id="countBusLines">0</span></div>
                     <div class="summary-item">Worship: <span id="countWorship">0</span></div>
                     <div class="summary-item">Schools: <span id="countSchools">0</span></div>
@@ -61,8 +59,8 @@
                     <div class="summary-item">Play: <span id="countPlaygrounds">0</span></div>
                     <div class="summary-item">Pools: <span id="countPools">0</span></div>
                 </div>
-                <div id="transitLegend" style="display:none; margin-top:15px; border-top:1px solid var(--border-subtle); padding-top:10px;">
-                    <h4 style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Bus Routes</h4>
+                <div id="transitLegend" style="display:none; margin-top:15px; border-top:1px solid #2d3748; padding-top:10px;">
+                    <h4 style="font-size:0.7rem; color:#a0aec0; text-transform:uppercase;">Bus Routes</h4>
                     <div id="busLegend" class="bus-legend-grid"></div>
                 </div>
             </div>
