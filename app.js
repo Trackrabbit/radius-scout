@@ -1,5 +1,13 @@
 let map, poiLayer, centerMarker, radiusCircle, currentCenter;
 let activeBusLayers = {};
+// --- NEW GLOBALS FOR CYCLING ---
+let styleIndex = 0;
+let baseTileLayer;
+const styles = [
+    { name: "Neon Dark", url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' },
+    { name: "Soft Light", url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' },
+    { name: "Street Detail", url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' }
+];
 
 const poiStyles = {
     worship: { color: "#f56565", label: "Worship" },
@@ -15,8 +23,13 @@ const poiStyles = {
 const routeColors = ["#00ffff", "#7fff00", "#ff00ff", "#ff4500", "#ffff00", "#00ff7f"];
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Initialize map
     map = L.map("map", { zoomControl: false }).setView([32.8407, -83.6324], 14);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+    
+    // Load the first style (Neon Dark)
+    updateMapStyle();
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
     poiLayer = L.layerGroup().addTo(map);
     setupEvents();
 });
@@ -53,6 +66,21 @@ async function fetchOverpass(lat, lon, radius, opts) {
     } catch (err) {
         throw err;
     }
+}
+
+function updateMapStyle() {
+    // 1. Remove the old layer so they don't stack and slow down the browser
+    if (baseTileLayer) map.removeLayer(baseTileLayer);
+
+    // 2. Add the new layer based on the current index
+    baseTileLayer = L.tileLayer(styles[styleIndex].url, {
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(map);
+
+    // 3. Update the button text to show what the NEXT click will do
+    const nextIndex = (styleIndex + 1) % styles.length;
+    const btn = document.getElementById("mapStyleToggle");
+    if (btn) btn.textContent = `Next Style: ${styles[nextIndex].name}`;
 }
 
 function renderResults(elements, rad) {
@@ -132,6 +160,12 @@ function categorize(el) {
 
 function setupEvents() {
     const searchBtn = document.getElementById("searchBtn");
+
+    // --- MAP STYLE CYCLE EVENT ---
+    document.getElementById("mapStyleToggle").addEventListener("click", () => {
+        styleIndex = (styleIndex + 1) % styles.length;
+        updateMapStyle();
+    });
     
     searchBtn.addEventListener("click", async () => {
         const addrInput = document.getElementById("addressInput");
