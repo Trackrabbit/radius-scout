@@ -34,3 +34,22 @@ header h1 { margin: 0; font-size: 1.1rem; color: var(--accent); text-transform: 
 #map { width: 100%; height: 100%; background: #05070c; }
 .circle-glow { filter: drop-shadow(0 0 5px var(--accent)); }
 path.bus-route-glow { filter: drop-shadow(0 0 3px currentColor); }
+.secondary-btn {
+    width: 100%;
+    padding: 0.6rem;
+    background: var(--bg-panel-alt);
+    border: 1px solid var(--border-subtle);
+    color: var(--accent);
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 5px;
+}
+
+.secondary-btn:hover {
+    background: var(--border-subtle);
+    border-color: var(--accent);
+}
