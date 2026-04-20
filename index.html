@@ -1,76 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radius Scout | POI & Transit</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radius Scout</title>
+
+<link rel="icon" href="assets/favicon.ico">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body>
-    <div id="app">
-        <header><h1>Radius Scout</h1></header>
-        <aside id="controls">
-            <div class="form-row">
-                <label>Address</label>
-                <input type="text" id="addressInput" placeholder="e.g. 700 Poplar St, Macon, GA">
-            </div>
-            <div class="form-row">
-                <label>Radius</label>
-                <select id="radiusSelect">
-                    <option value="152">500 ft</option>
-                    <option value="305" selected>1000 ft</option>
-                    <option value="1609">1 mile</option>
-                </select>
-            </div>
-            <div class="form-row">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                    <span style="font-size:0.7rem; font-weight:800; color:var(--accent);">POIs</span>
-                    <button id="toggleAllBtn" type="button">Deselect All</button>
-                </div>
-                <div class="checkbox-grid">
-                    <label><input type="checkbox" id="poiWorship" checked> Worship</label>
-                    <label><input type="checkbox" id="poiSchools" checked> Schools</label>
-                    <label><input type="checkbox" id="poiColleges" checked> Colleges</label>
-                    <label><input type="checkbox" id="poiKindergarten" checked> Kinder</label>
-                    <label><input type="checkbox" id="poiDaycare" checked> Daycare</label>
-                    <label><input type="checkbox" id="poiLibraries" checked> Library</label>
-                    <label><input type="checkbox" id="poiParks" checked> Parks</label>
-                    <label><input type="checkbox" id="poiPlaygrounds" checked> Play</label>
-                    <label><input type="checkbox" id="poiPools" checked> Pools</label>
-                    <label><input type="checkbox" id="poiBusLines" checked> Bus Lines</label>
-                </div>
-            </div>
-            <div class="form-row">
-                <button id="mapStyleToggle" type="button" class="secondary-btn">Next Style: Soft Light</button>
-            </div>
-            <div class="button-group">
-                <button id="searchBtn">Search Area</button>
-                <button id="clearBtn">Clear</button>
-            </div>
-            <div id="summaryPopup" class="summary hidden">
-                <h3>Summary</h3>
-                <div class="poi-summary-grid">
-                    <div class="summary-item">Buses: <span id="countBusLines">0</span></div>
-                    <div class="summary-item">Worship: <span id="countWorship">0</span></div>
-                    <div class="summary-item">Schools: <span id="countSchools">0</span></div>
-                    <div class="summary-item">Colleges: <span id="countColleges">0</span></div>
-                    <div class="summary-item">Kinder: <span id="countKindergarten">0</span></div>
-                    <div class="summary-item">Daycare: <span id="countDaycare">0</span></div>
-                    <div class="summary-item">Library: <span id="countLibraries">0</span></div>
-                    <div class="summary-item">Parks: <span id="countParks">0</span></div>
-                    <div class="summary-item">Play: <span id="countPlaygrounds">0</span></div>
-                    <div class="summary-item">Pools: <span id="countPools">0</span></div>
-                </div>
-                <div id="transitLegend" style="display:none; margin-top:15px; border-top:1px solid #2d3748; padding-top:10px;">
-                    <h4 style="font-size:0.7rem; color:#a0aec0; text-transform:uppercase;">Bus Routes</h4>
-                    <div id="busLegend" class="bus-legend-grid"></div>
-                </div>
-            </div>
-        </aside>
-        <main id="mapSection"><div id="map"></div></main>
+
+<div id="map"></div>
+
+<div class="panel">
+  <div class="brand">
+    <img src="assets/logo.png">
+    <div>
+      <h2>Radius Scout</h2>
+      <span>Location Intelligence</span>
     </div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="app.js"></script>
+  </div>
+
+  <input id="addressInput" placeholder="Enter address">
+
+  <select id="radiusSelect">
+    <option value="152">500 ft</option>
+    <option value="305">1000 ft</option>
+    <option value="805">1/2 mile</option>
+    <option value="1609">1 mile</option>
+  </select>
+
+  <div id="poiChips" class="grid"></div>
+
+  <button class="primary" id="searchBtn">Search</button>
+  <button class="secondary" id="clearBtn">Clear</button>
+
+  <div id="summary" class="summary"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/app.js"></script>
+
 </body>
 </html>
