@@ -57,22 +57,28 @@ async function geo(a){
   return {lat:+j[0].lat,lon:+j[0].lon};
 }
 
-function query(c,r,keys){
-  let q=[];
-  keys.forEach(k=>{
-    POI_CONFIG[k].filters.forEach(([t,v])=>{
-      if(v==='*'){
-        q.push(`node["${t}"](around:${r},${c.lat},${c.lon});`);
-        q.push(`way["${t}"](around:${r},${c.lat},${c.lon});`);
-        q.push(`relation["${t}"](around:${r},${c.lat},${c.lon});`);
+function query(c, r, keys){
+  let groups = [];
+
+  keys.forEach(k => {
+    POI_CONFIG[k].filters.forEach(([tag, val]) => {
+
+      if (val === '*') {
+        groups.push(`nwr["${tag}"](around:${r},${c.lat},${c.lon})`);
       } else {
-        q.push(`node["${t}"="${v}"](around:${r},${c.lat},${c.lon});`);
-        q.push(`way["${t}"="${v}"](around:${r},${c.lat},${c.lon});`);
-        q.push(`relation["${t}"="${v}"](around:${r},${c.lat},${c.lon});`);
+        groups.push(`nwr["${tag}"="${val}"](around:${r},${c.lat},${c.lon})`);
       }
+
     });
   });
-  return `[out:json];(${q.join('')});out center;`;
+
+  return `
+[out:json][timeout:25];
+(
+  ${groups.join(";\n")}
+);
+out center;
+`;
 }
 
 async function fetchPOI(c,r,k){
@@ -83,10 +89,16 @@ async function fetchPOI(c,r,k){
 function match(tags){
   for(const [k,p] of Object.entries(POI_CONFIG)){
     for(const [t,v] of p.filters){
-      if(v==='*' && tags[t]) return k;
-      if(tags[t]===v) return k;
+      if(v === '*' && tags?.[t]) return k;
+      if(tags?.[t] === v) return k;
     }
   }
+  return null;
+}
+let k = match(d.tags);
+
+if(!k || !keys.includes(k)){
+  k = keys[0]; // fallback to selected category
 }
 
 // Filter
