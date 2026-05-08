@@ -1,170 +1,540 @@
+// =========================
+// CONFIG
+// =========================
+
 const POI_CONFIG = {
-  worship:{label:'Worship',icon:'⛪',default:true,filters:[['amenity','place_of_worship']]},
-  school:{label:'School',icon:'🏫',default:true,filters:[['amenity','school']]},
-  college:{label:'College',icon:'🎓',default:true,filters:[['amenity','college'],['amenity','university']]},
-  kindergarten:{label:'Kinder',icon:'🧒',default:true,filters:[['amenity','kindergarten']]},
-  daycare:{label:'Daycare',icon:'👶',default:true,filters:[['amenity','childcare']]},
-  library:{label:'Library',icon:'📚',default:true,filters:[['amenity','library']]},
-  park:{label:'Park',icon:'🌳',default:true,filters:[['leisure','park']]},
-  playground:{label:'Play',icon:'🛝',default:true,filters:[['leisure','playground']]},
-  pool:{label:'Pool',icon:'🏊',default:true,filters:[['leisure','swimming_pool']]},
-  bus_stop:{label:'Bus Stop',icon:'🚌',default:true,filters:[['highway','bus_stop']]},
-  bus_station:{label:'Bus Station',icon:'🚏',default:true,filters:[['amenity','bus_station']]},
-  apartments:{label:'Apartments',icon:'🏢',default:true,filters:[['building','apartments'],['building','residential']]},
-  restaurant:{label:'Restaurant',icon:'🍽️',default:false,filters:[['amenity','restaurant']]},
-  shop:{label:'Store',icon:'🛍️',default:false,filters:[['shop','*']]},
-  cafe:{label:'Cafe',icon:'☕',default:false,filters:[['amenity','cafe']]},
-  office:{label:'Office',icon:'💼',default:false,filters:[['office','*']]},
-  hotel:{label:'Hotel',icon:'🏨',default:false,filters:[['tourism','hotel'],['tourism','motel'],['tourism','guest_house']]}
+
+  worship:{
+    label:'Worship',
+    icon:'⛪',
+    default:true,
+    filters:[['amenity','place_of_worship']]
+  },
+
+  school:{
+    label:'Schools',
+    icon:'🏫',
+    default:true,
+    filters:[['amenity','school']]
+  },
+
+  college:{
+    label:'Colleges',
+    icon:'🎓',
+    default:true,
+    filters:[
+      ['amenity','college'],
+      ['amenity','university']
+    ]
+  },
+
+  kindergarten:{
+    label:'Kinder',
+    icon:'🧒',
+    default:true,
+    filters:[['amenity','kindergarten']]
+  },
+
+  daycare:{
+    label:'Daycare',
+    icon:'👶',
+    default:true,
+    filters:[['amenity','childcare']]
+  },
+
+  library:{
+    label:'Libraries',
+    icon:'📚',
+    default:true,
+    filters:[['amenity','library']]
+  },
+
+  park:{
+    label:'Parks',
+    icon:'🌳',
+    default:true,
+    filters:[['leisure','park']]
+  },
+
+  playground:{
+    label:'Play',
+    icon:'🛝',
+    default:true,
+    filters:[['leisure','playground']]
+  },
+
+  pool:{
+    label:'Pools',
+    icon:'🏊',
+    default:true,
+    filters:[['leisure','swimming_pool']]
+  },
+
+  bus_stop:{
+    label:'Bus Stops',
+    icon:'🚌',
+    default:true,
+    filters:[['highway','bus_stop']]
+  },
+
+  bus_station:{
+    label:'Bus Stations',
+    icon:'🚏',
+    default:true,
+    filters:[['amenity','bus_station']]
+  },
+
+  apartments:{
+    label:'Apartments',
+    icon:'🏢',
+    default:true,
+    filters:[
+      ['building','apartments'],
+      ['building','residential']
+    ]
+  },
+
+  restaurant:{
+    label:'Restaurants',
+    icon:'🍽️',
+    default:false,
+    filters:[['amenity','restaurant']]
+  },
+
+  shop:{
+    label:'Stores',
+    icon:'🛍️',
+    default:false,
+    filters:[['shop','*']]
+  },
+
+  cafe:{
+    label:'Cafes',
+    icon:'☕',
+    default:false,
+    filters:[['amenity','cafe']]
+  },
+
+  office:{
+    label:'Offices',
+    icon:'💼',
+    default:false,
+    filters:[['office','*']]
+  },
+
+  hotel:{
+    label:'Hotels',
+    icon:'🏨',
+    default:false,
+    filters:[
+      ['tourism','hotel'],
+      ['tourism','motel'],
+      ['tourism','guest_house']
+    ]
+  }
+
 };
 
+// =========================
+// MAP
+// =========================
+
 const map = L.map('map').setView([32.84,-83.63],12);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-let markers = L.layerGroup().addTo(map);
+L.tileLayer(
+  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  {
+    attribution:'© OpenStreetMap © CARTO'
+  }
+).addTo(map);
+
+let markerLayer = L.layerGroup().addTo(map);
+
 let markersByType = {};
+
 let activeFilter = null;
-let circle;
 
-const chips = document.getElementById('poiChips');
-const summary = document.getElementById('summary');
+let radiusCircle = null;
 
-// Build UI
-Object.entries(POI_CONFIG).forEach(([k,p],i)=>{
-  let chip=document.createElement('div');
-  chip.className='chip';
-  chip.innerText=p.icon+' '+p.label;
-  if(p.default) chip.classList.add('active');
-  chip.onclick=()=>chip.classList.toggle('active');
-  chips.appendChild(chip);
+// =========================
+// UI
+// =========================
 
-  let s=document.createElement('div');
-  s.id='sum-'+k;
-  s.innerHTML=p.icon+' '+p.label+': <span id="count-'+k+'">0</span>';
-  s.onclick=()=>filter(k);
-  summary.appendChild(s);
+const poiContainer = document.getElementById('poiContainer');
+const summaryGrid = document.getElementById('summaryGrid');
+
+Object.entries(POI_CONFIG).forEach(([key,poi])=>{
+
+  // Chips
+
+  const chip = document.createElement('div');
+
+  chip.className = 'poi-chip';
+
+  if(poi.default){
+    chip.classList.add('active');
+  }
+
+  chip.dataset.key = key;
+
+  chip.innerHTML = `${poi.icon} ${poi.label}`;
+
+  chip.onclick = ()=>{
+
+    chip.classList.toggle('active');
+
+  };
+
+  poiContainer.appendChild(chip);
+
+  // Summary cards
+
+  const card = document.createElement('div');
+
+  card.className = 'summary-card';
+
+  card.id = `summary-${key}`;
+
+  card.innerHTML = `
+    <div class="summary-label">
+      ${poi.icon} ${poi.label}
+    </div>
+
+    <div class="summary-value" id="count-${key}">
+      0
+    </div>
+  `;
+
+  card.onclick = ()=>toggleFilter(key);
+
+  summaryGrid.appendChild(card);
+
 });
 
-function selected(){
-  return [...chips.children]
-    .map((c,i)=>c.classList.contains('active')?Object.keys(POI_CONFIG)[i]:null)
-    .filter(Boolean);
+// =========================
+// HELPERS
+// =========================
+
+function selectedPOI(){
+
+  return [...document.querySelectorAll('.poi-chip.active')]
+    .map(el=>el.dataset.key);
+
 }
 
-async function geo(a){
-  let r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a)}`);
-  let j=await r.json();
-  return {lat:+j[0].lat,lon:+j[0].lon};
+function showLoading(show){
+
+  document
+    .getElementById('loading')
+    .classList.toggle('hidden', !show);
+
 }
 
-function query(c, r, keys){
-  let groups = [];
+async function geocode(address){
 
-  keys.forEach(k => {
-    POI_CONFIG[k].filters.forEach(([tag, val]) => {
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`
+  );
 
-      if (val === '*') {
-        groups.push(`nwr["${tag}"](around:${r},${c.lat},${c.lon})`);
+  const data = await response.json();
+
+  if(!data.length){
+    throw new Error('Address not found');
+  }
+
+  return {
+    lat:+data[0].lat,
+    lon:+data[0].lon
+  };
+
+}
+
+function buildQuery(center, radius, keys){
+
+  let queryParts = [];
+
+  keys.forEach(key=>{
+
+    const poi = POI_CONFIG[key];
+
+    poi.filters.forEach(([tag,val])=>{
+
+      if(val === '*'){
+
+        queryParts.push(
+          `nwr["${tag}"](around:${radius},${center.lat},${center.lon});`
+        );
+
       } else {
-        groups.push(`nwr["${tag}"="${val}"](around:${r},${c.lat},${c.lon})`);
+
+        queryParts.push(
+          `nwr["${tag}"="${val}"](around:${radius},${center.lat},${center.lon});`
+        );
+
       }
 
     });
+
   });
 
   return `
 [out:json][timeout:25];
 (
-  ${groups.join(";\n")}
+  ${queryParts.join('\n')}
 );
 out center;
 `;
+
 }
 
-async function fetchPOI(c,r,k){
-  let res=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:query(c,r,k)});
-  return (await res.json()).elements;
-}
+async function fetchPOI(center, radius, keys){
 
-function match(tags){
-  for(const [k,p] of Object.entries(POI_CONFIG)){
-    for(const [t,v] of p.filters){
-      if(v === '*' && tags?.[t]) return k;
-      if(tags?.[t] === v) return k;
+  const query = buildQuery(center, radius, keys);
+
+  const response = await fetch(
+    'https://overpass-api.de/api/interpreter',
+    {
+      method:'POST',
+      body:query
     }
+  );
+
+  const data = await response.json();
+
+  return data.elements || [];
+
+}
+
+function matchPOI(tags){
+
+  for(const [key,poi] of Object.entries(POI_CONFIG)){
+
+    for(const [tag,val] of poi.filters){
+
+      if(val === '*' && tags?.[tag]){
+        return key;
+      }
+
+      if(tags?.[tag] === val){
+        return key;
+      }
+
+    }
+
   }
+
   return null;
-}
-let k = match(d.tags);
 
-if(!k || !keys.includes(k)){
-  k = keys[0]; // fallback to selected category
 }
 
-// Filter
-function filter(k){
-  document.querySelectorAll('.summary div').forEach(el=>el.classList.remove('active'));
+// =========================
+// FILTER
+// =========================
 
-  if(activeFilter===k){
-    activeFilter=null;
-    markers.clearLayers();
-    Object.values(markersByType).flat().forEach(m=>markers.addLayer(m));
+function toggleFilter(key){
+
+  document
+    .querySelectorAll('.summary-card')
+    .forEach(el=>el.classList.remove('active'));
+
+  if(activeFilter === key){
+
+    activeFilter = null;
+
+    markerLayer.clearLayers();
+
+    Object.values(markersByType)
+      .flat()
+      .forEach(marker=>markerLayer.addLayer(marker));
+
     return;
+
   }
 
-  activeFilter=k;
-  document.getElementById('sum-'+k).classList.add('active');
+  activeFilter = key;
 
-  markers.clearLayers();
-  markersByType[k].forEach(m=>markers.addLayer(m));
+  document
+    .getElementById(`summary-${key}`)
+    .classList.add('active');
+
+  markerLayer.clearLayers();
+
+  markersByType[key]
+    .forEach(marker=>markerLayer.addLayer(marker));
+
 }
 
-// Search
-document.getElementById('searchBtn').onclick = async () => {
-  let addr = addressInput.value;
-  let rad = +radiusSelect.value;
-  let keys = selected();
+// =========================
+// SEARCH
+// =========================
 
-  let c = await geo(addr);
-  map.setView([c.lat,c.lon],15);
+document
+  .getElementById('searchBtn')
+  .onclick = async ()=>{
 
-  if(circle) map.removeLayer(circle);
-  circle = L.circle([c.lat,c.lon],{radius:rad}).addTo(map);
+  try{
 
-  markers.clearLayers();
-  markersByType = {};
-  let counts = {};
+    const address =
+      document.getElementById('addressInput').value.trim();
 
-  Object.keys(POI_CONFIG).forEach(k=>{
-    markersByType[k]=[];
-    counts[k]=0;
-  });
+    if(!address){
+      alert('Enter an address');
+      return;
+    }
 
-  let data = await fetchPOI(c,rad,keys);
+    const radius =
+      +document.getElementById('radiusSelect').value;
 
-  data.forEach(d=>{
-    let lat = d.lat || (d.center && d.center.lat);
-    let lon = d.lon || (d.center && d.center.lon);
-    if(!lat) return;
+    const selected = selectedPOI();
 
-    let k = match(d.tags) || keys[0];
-    counts[k]++;
+    if(!selected.length){
+      alert('Select at least one POI');
+      return;
+    }
 
-    let icon = L.divIcon({html:POI_CONFIG[k].icon});
-    let m = L.marker([lat,lon],{icon});
+    showLoading(true);
 
-    markersByType[k].push(m);
-    markers.addLayer(m);
-  });
+    // Geocode
 
-  Object.entries(counts).forEach(([k,v])=>{
-    document.getElementById('count-'+k).innerText=v;
-  });
+    const center = await geocode(address);
+
+    map.setView([center.lat, center.lon], 15);
+
+    // Radius
+
+    if(radiusCircle){
+      map.removeLayer(radiusCircle);
+    }
+
+    radiusCircle = L.circle(
+      [center.lat, center.lon],
+      {
+        radius,
+        color:'#8b5cf6',
+        fillOpacity:0.06
+      }
+    ).addTo(map);
+
+    // Reset
+
+    markerLayer.clearLayers();
+
+    markersByType = {};
+
+    let counts = {};
+
+    Object.keys(POI_CONFIG).forEach(key=>{
+
+      markersByType[key] = [];
+
+      counts[key] = 0;
+
+    });
+
+    // Fetch
+
+    const results = await fetchPOI(
+      center,
+      radius,
+      selected
+    );
+
+    // Render
+
+    results.forEach(item=>{
+
+      const lat =
+        item.lat ||
+        item.center?.lat;
+
+      const lon =
+        item.lon ||
+        item.center?.lon;
+
+      if(!lat || !lon){
+        return;
+      }
+
+      let type =
+        matchPOI(item.tags);
+
+      if(!type || !selected.includes(type)){
+        type = selected[0];
+      }
+
+      counts[type]++;
+
+      const marker = L.marker(
+        [lat, lon],
+        {
+          icon:L.divIcon({
+            className:'custom-marker',
+            html:`
+              <div style="
+                font-size:20px;
+                filter:drop-shadow(0 0 4px rgba(0,0,0,0.8));
+              ">
+                ${POI_CONFIG[type].icon}
+              </div>
+            `
+          })
+        }
+      );
+
+      marker.bindPopup(`
+        <strong>
+          ${item.tags?.name || POI_CONFIG[type].label}
+        </strong>
+      `);
+
+      markersByType[type].push(marker);
+
+      markerLayer.addLayer(marker);
+
+    });
+
+    // Update summary
+
+    Object.entries(counts).forEach(([key,val])=>{
+
+      document
+        .getElementById(`count-${key}`)
+        .innerText = val;
+
+    });
+
+  } catch(error){
+
+    console.error(error);
+
+    alert(error.message || 'Search failed');
+
+  } finally {
+
+    showLoading(false);
+
+  }
+
 };
 
-// Clear
-document.getElementById('clearBtn').onclick = () => {
-  markers.clearLayers();
-  if(circle) map.removeLayer(circle);
-  activeFilter=null;
+// =========================
+// CLEAR
+// =========================
+
+document
+  .getElementById('clearBtn')
+  .onclick = ()=>{
+
+  markerLayer.clearLayers();
+
+  if(radiusCircle){
+    map.removeLayer(radiusCircle);
+  }
+
+  activeFilter = null;
+
+  document
+    .querySelectorAll('.summary-card')
+    .forEach(el=>el.classList.remove('active'));
+
 };
