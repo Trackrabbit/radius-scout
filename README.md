@@ -1,18 +1,29 @@
 # Radius Scout
 
-A sleek, map-based POI radius search tool built with Leaflet and OpenStreetMap.
+Radius-based POI discovery tool built with:
+
+- Leaflet
+- OpenStreetMap
+- Nominatim
+- Overpass API
 
 ## Features
-- Search by address
-- Adjustable radius
-- Dynamic POI filtering
+
+- Address search
+- Radius overlay
+- Dynamic POI filters
 - Interactive summary filtering
-- Dark SaaS-style UI
+- Dark premium UI
+- Mobile responsive
 
-## Tech Stack
-- Leaflet.js
-- OpenStreetMap (Nominatim + Overpass)
-- Vanilla JS (no framework)
+## Deployment
 
-## Notes
-- Uses free APIs (rate-limited)
+1. Upload to GitHub
+2. Enable GitHub Pages
+3. Deploy from main branch
+
+## Free APIs Used
+
+- Nominatim (geocoding)
+- Overpass API (POI)
+- CARTO Dark Matter tiles
