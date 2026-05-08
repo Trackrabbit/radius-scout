@@ -503,6 +503,19 @@ document
 
     });
 
+    // Mobile UX improvement
+
+    if(window.innerWidth <= 768){
+
+      document
+        .querySelector('.panel')
+        .scrollTo({
+          top:9999,
+          behavior:'smooth'
+        });
+
+    }
+
   } catch(error){
 
     console.error(error);
