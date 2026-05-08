@@ -411,7 +411,9 @@ document
       {
         radius,
         color:'#8b5cf6',
-        fillOpacity:0.06
+        fillOpacity:0.12,
+        weight:2,
+        dashArray:'4'
       }
     ).addTo(map);
 
