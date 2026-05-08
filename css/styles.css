@@ -1,3 +1,12 @@
+html,
+body{
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
 :root{
   --bg:#070b12;
   --panel:rgba(15,23,42,0.82);
@@ -47,6 +56,10 @@ body{
 
   box-shadow:
     0 20px 60px rgba(0,0,0,0.5);
+}
+
+.panel{
+  -webkit-overflow-scrolling:touch;
 }
 
 /* Brand */
@@ -173,6 +186,12 @@ button{
   transition:0.2s ease;
 }
 
+button:active,
+.poi-chip:active,
+.summary-card:active{
+  transform:scale(0.98);
+}
+
 .primary-btn{
   background:var(--accent);
   color:white;
@@ -240,20 +259,98 @@ button{
   display:none;
 }
 
+/* Leaflet */
+
+.leaflet-control-zoom{
+  margin-top:80px !important;
+}
+
 /* Mobile */
 
 @media(max-width:768px){
 
+  /* Panel becomes bottom sheet */
+
   .panel{
-    width:calc(100vw - 20px);
-    left:10px;
-    top:10px;
-    max-height:50vh;
+    position:fixed;
+
+    left:0;
+    right:0;
+    bottom:0;
+    top:auto;
+
+    width:100%;
+    max-height:62vh;
+
+    border-radius:20px 20px 0 0;
+
+    padding:16px;
+
+    overflow-y:auto;
+
+    background:rgba(15,23,42,0.96);
+
+    backdrop-filter:blur(24px);
+
+    box-shadow:
+      0 -10px 40px rgba(0,0,0,0.5);
   }
 
-  .poi-grid,
+  /* Drag indicator */
+
+  .panel::before{
+    content:'';
+
+    width:48px;
+    height:5px;
+
+    background:#475569;
+
+    border-radius:999px;
+
+    position:absolute;
+
+    top:8px;
+    left:50%;
+
+    transform:translateX(-50%);
+  }
+
+  .brand{
+    margin-top:10px;
+  }
+
+  /* Better tap targets */
+
+  input,
+  select,
+  button,
+  .poi-chip,
+  .summary-card{
+    min-height:48px;
+  }
+
+  /* Cleaner stacking */
+
+  .poi-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
   .summary-grid{
-    grid-template-columns:1fr;
+    grid-template-columns:1fr 1fr;
+  }
+
+  /* Reduce spacing */
+
+  .summary-value{
+    font-size:16px;
+  }
+
+  /* Prevent zoom weirdness */
+
+  input,
+  select{
+    font-size:16px;
   }
 
 }
