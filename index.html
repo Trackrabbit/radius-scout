@@ -1,46 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Radius Scout</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Radius Scout</title>
 
-<link rel="icon" href="assets/favicon.ico">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="assets/favicon.ico">
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 
 <body>
 
 <div id="map"></div>
 
+<!-- Floating Glass Panel -->
 <div class="panel">
+
   <div class="brand">
-    <img src="assets/logo.png">
+    <img src="assets/logo.png" alt="Logo">
     <div>
-      <h2>Radius Scout</h2>
+      <h1>Radius Scout</h1>
       <span>Location Intelligence</span>
     </div>
   </div>
 
-  <input id="addressInput" placeholder="Enter address">
+  <div class="search-group">
+    <input
+      id="addressInput"
+      type="text"
+      placeholder="Enter address"
+    >
 
-  <select id="radiusSelect">
-    <option value="152">500 ft</option>
-    <option value="305">1000 ft</option>
-    <option value="805">1/2 mile</option>
-    <option value="1609">1 mile</option>
-  </select>
+    <select id="radiusSelect">
+      <option value="152">500 ft</option>
+      <option value="305">1000 ft</option>
+      <option value="805">1/2 mile</option>
+      <option value="1609">1 mile</option>
+    </select>
+  </div>
 
-  <div id="poiChips" class="grid"></div>
+  <div class="section-title">Points of Interest</div>
 
-  <button class="primary" id="searchBtn">Search</button>
-  <button class="secondary" id="clearBtn">Clear</button>
+  <div id="poiContainer" class="poi-grid"></div>
 
-  <div id="summary" class="summary"></div>
+  <div class="button-row">
+    <button id="searchBtn" class="primary-btn">
+      Search Area
+    </button>
+
+    <button id="clearBtn" class="secondary-btn">
+      Clear
+    </button>
+  </div>
+
+  <div id="loading" class="loading hidden">
+    Searching...
+  </div>
+
+  <div class="section-title summary-title">
+    Summary
+  </div>
+
+  <div id="summaryGrid" class="summary-grid"></div>
+
 </div>
 
+<!-- Leaflet -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- App -->
 <script src="js/app.js"></script>
 
 </body>
