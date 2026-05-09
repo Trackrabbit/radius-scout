@@ -1,3 +1,4 @@
+```javascript
 // =========================
 // CONFIG
 // =========================
@@ -140,6 +141,8 @@ const POI_CONFIG = {
 // =========================
 
 const map = L.map('map').setView([32.84,-83.63],12);
+
+// PREMIUM LIGHT MAP
 
 L.tileLayer(
   'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -400,7 +403,7 @@ document
 
     map.setView([center.lat, center.lon], 15);
 
-    // Radius
+    // Radius Circle
 
     if(radiusCircle){
       map.removeLayer(radiusCircle);
@@ -411,6 +414,7 @@ document
       {
         radius,
         color:'#8b5cf6',
+        fillColor:'#8b5cf6',
         fillOpacity:0.12,
         weight:2,
         dashArray:'4'
@@ -433,7 +437,7 @@ document
 
     });
 
-    // Fetch
+    // Fetch POI
 
     const results = await fetchPOI(
       center,
@@ -474,7 +478,7 @@ document
             html:`
               <div style="
                 font-size:20px;
-                filter:drop-shadow(0 0 4px rgba(0,0,0,0.8));
+                filter:drop-shadow(0 0 4px rgba(0,0,0,0.5));
               ">
                 ${POI_CONFIG[type].icon}
               </div>
@@ -495,7 +499,7 @@ document
 
     });
 
-    // Update summary
+    // Update Summary
 
     Object.entries(counts).forEach(([key,val])=>{
 
@@ -505,7 +509,7 @@ document
 
     });
 
-    // Mobile UX improvement
+    // Mobile UX Improvement
 
     if(window.innerWidth <= 768){
 
@@ -553,3 +557,4 @@ document
     .forEach(el=>el.classList.remove('active'));
 
 };
+```
