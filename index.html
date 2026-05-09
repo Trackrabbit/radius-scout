@@ -1,83 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Radius Scout</title>
-
-  <link rel="icon" href="assets/favicon.ico">
-
-  <!-- Leaflet -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
-
-  <!-- App CSS -->
-  <link rel="stylesheet" href="css/styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Map Web App</title>
+  
+  <!-- Leaflet CSS for the Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Link to your styles.css -->
+  <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
 
-<div id="map"></div>
+  <!-- Fullscreen Map Container -->
+  <div id="map"></div>
 
-<!-- Floating Glass Panel -->
-<div class="panel">
-
-  <div class="brand">
-    <img src="assets/logo.png" alt="Logo">
-    <div>
-      <h1>Radius Scout</h1>
-      <span>Location Intelligence</span>
+  <!-- Draggable/Collapsible Panel -->
+  <div class="panel expanded">
+    
+    <!-- Clickable Header Area for Mobile Toggle -->
+    <div class="panel-header" id="panel-toggle">
+      <div class="brand">
+        <!-- Placeholder image -->
+        <img src="https://via.placeholder.com/42/8b5cf6/ffffff?text=M" alt="Brand Logo">
+        <div>
+          <h1>GeoApp</h1>
+          <span>Explore your world</span>
+        </div>
+      </div>
     </div>
+
+    <!-- Search Section -->
+    <div class="search-group">
+      <input type="text" placeholder="Search locations...">
+      <select>
+        <option value="all">All Categories</option>
+        <option value="food">Food & Drink</option>
+        <option value="retail">Retail</option>
+        <option value="services">Services</option>
+      </select>
+    </div>
+
+    <!-- POI Quick Filters -->
+    <div class="section-title">Points of Interest</div>
+    <div class="poi-grid">
+      <div class="poi-chip active">Coffee Shops</div>
+      <div class="poi-chip">Restaurants</div>
+      <div class="poi-chip">Parks</div>
+      <div class="poi-chip">Transit</div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="section-title">Area Overview</div>
+    <div class="summary-grid">
+      <div class="summary-card active">
+        <div class="summary-label">Total Places</div>
+        <div class="summary-value">1,248</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Avg Rating</div>
+        <div class="summary-value">4.6</div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="button-row">
+      <button class="secondary-btn">Clear</button>
+      <button class="primary-btn">Apply Filters</button>
+    </div>
+
+    <!-- Loading Indicator (Hidden by default) -->
+    <div class="loading hidden">Loading data...</div>
+
   </div>
 
-  <div class="search-group">
-    <input
-      id="addressInput"
-      type="text"
-      placeholder="Enter address"
-    >
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- App Logic -->
+  <script>
+    // 1. Initialize Map (Basic Leaflet Setup)
+    const map = L.map('map', {
+      zoomControl: true // Zoom controls are moved down by your CSS
+    }).setView([32.8407, -83.6324], 13); // Centered on Macon, GA as an example
 
-    <select id="radiusSelect">
-      <option value="152">500 ft</option>
-      <option value="305" selected>1000 ft</option>
-      <option value="805">1/2 mile</option>
-      <option value="1609">1 mile</option>
-    </select>
-  </div>
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 20
+    }).addTo(map);
 
-  <div class="section-title">Points of Interest</div>
+    // 2. Mobile Panel Toggle Logic
+    document.addEventListener('DOMContentLoaded', () => {
+      const panel = document.querySelector('.panel');
+      const toggleArea = document.getElementById('panel-toggle');
 
-  <div id="poiContainer" class="poi-grid"></div>
+      toggleArea.addEventListener('click', () => {
+        // Only apply toggle logic on mobile view (768px or less)
+        if (window.innerWidth <= 768) {
+          panel.classList.toggle('expanded');
+          
+          // Scroll back to the top of the panel when collapsing
+          if (!panel.classList.contains('expanded')) {
+            panel.scrollTop = 0;
+          }
+        }
+      });
 
-  <div class="button-row">
-    <button id="searchBtn" class="primary-btn">
-      Search Area
-    </button>
-
-    <button id="clearBtn" class="secondary-btn">
-      Clear
-    </button>
-  </div>
-
-  <div id="loading" class="loading hidden">
-    Searching...
-  </div>
-
-  <div class="section-title summary-title">
-    Summary
-  </div>
-
-  <div id="summaryGrid" class="summary-grid"></div>
-
-</div>
-
-<!-- Leaflet -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<!-- App -->
-<script src="js/app.js"></script>
-
+      // Simple active state toggle for UI demonstration
+      const chips = document.querySelectorAll('.poi-chip, .summary-card');
+      chips.forEach(chip => {
+        chip.addEventListener('click', function() {
+          this.classList.toggle('active');
+        });
+      });
+    });
+  </script>
 </body>
 </html>
