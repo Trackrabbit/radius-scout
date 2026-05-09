@@ -1,4 +1,3 @@
-```javascript
 // =========================
 // CONFIG
 // =========================
@@ -557,4 +556,3 @@ document
     .forEach(el=>el.classList.remove('active'));
 
 };
-```
