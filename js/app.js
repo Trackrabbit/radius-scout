@@ -255,11 +255,18 @@ async function geocode(address){
     throw new Error('Address not found');
   }
 
+  const matchedAddress =
+    document.getElementById('matchedAddress');
+
+  matchedAddress.style.display = 'block';
+
+  matchedAddress.innerHTML =
+    `<strong>Matched:</strong><br>${data[0].display_name}`;
+
   return {
     lat:+data[0].lat,
     lon:+data[0].lon
   };
-
 }
 
 function buildQuery(center, radius, keys){
