@@ -587,8 +587,6 @@ document
         lon:Number(selectedLocation.lon)
       };
     
-    }
-    
     }else{
     
       center = await geocode(address);
