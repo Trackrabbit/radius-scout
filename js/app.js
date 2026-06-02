@@ -260,8 +260,14 @@ async function geocode(address){
 
   matchedAddress.style.display = 'block';
 
-  matchedAddress.innerHTML =
-    `<strong>Matched:</strong><br>${data[0].display_name}`;
+  matchedAddress.innerHTML = `
+    <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+      Matched Address
+    </div>
+    <div>
+      ${data[0].display_name}
+    </div>
+  `;
 
   return {
     lat:+data[0].lat,
