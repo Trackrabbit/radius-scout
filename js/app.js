@@ -136,6 +136,19 @@ const POI_CONFIG = {
 };
 
 // =========================
+// Address Cleanup
+// =========================
+
+function cleanAddress(address) {
+  return address
+    .trim()
+    .replace(/\s+/g, ' ')      // collapse multiple spaces
+    .replace(/,+/g, ',')       // collapse multiple commas
+    .replace(/\s*,\s*/g, ', ') // normalize comma spacing
+    .replace(/\n/g, ' ');      // remove line breaks
+}
+
+// =========================
 // MAP
 // =========================
 
@@ -374,8 +387,9 @@ document
 
   try{
 
-    const address =
-      document.getElementById('addressInput').value.trim();
+    const address = cleanAddress(
+      document.getElementById('addressInput').value
+    );
 
     if(!address){
       alert('Enter an address');
