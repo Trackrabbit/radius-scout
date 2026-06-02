@@ -136,7 +136,7 @@ const POI_CONFIG = {
 };
 
 // =========================
-// Address Cleanup
+// ADDRESS CLEANUP
 // =========================
 
 function cleanAddress(address) {
@@ -304,6 +304,17 @@ function showLoading(show){
     .getElementById('loading')
     .classList.toggle('hidden', !show);
 
+}
+
+async function reverseGeocode(lat, lon){
+
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+  );
+
+  const data = await response.json();
+
+  return data.display_name || '';
 }
 
 async function geocode(address){
@@ -572,11 +583,11 @@ document
     if(selectedLocation){
     
       center = {
-    
-        lat:+selectedLocation.lat,
-        lon:+selectedLocation.lon
-    
+        lat:Number(selectedLocation.lat),
+        lon:Number(selectedLocation.lon)
       };
+    
+    }
     
     }else{
     
@@ -718,6 +729,95 @@ document
 
 };
 
+// =========================
+// LOCATION LOGIC
+// =========================
+
+document
+  .getElementById('locationBtn')
+  .onclick = () => {
+
+    if(!navigator.geolocation){
+
+      alert('Geolocation not supported');
+
+      return;
+    }
+
+    showLoading(true);
+
+    navigator.geolocation.getCurrentPosition(
+
+      async position => {
+
+        try{
+
+          const lat =
+            position.coords.latitude;
+
+          const lon =
+            position.coords.longitude;
+
+          selectedLocation = {
+            lat,
+            lon
+          };
+
+          map.setView([lat, lon], 16);
+
+          const address =
+            await reverseGeocode(lat, lon);
+
+          document
+            .getElementById('addressInput')
+            .value = address;
+
+          document
+            .getElementById('matchedAddress')
+            .innerHTML = `
+              <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+                Current Location
+              </div>
+              <div>
+                ${address}
+              </div>
+            `;
+
+          document
+            .getElementById('searchBtn')
+            .click();
+
+        }catch(err){
+
+          console.error(err);
+
+        }finally{
+
+          showLoading(false);
+
+        }
+
+      },
+
+      error => {
+
+        showLoading(false);
+
+        alert(
+          'Unable to retrieve location. Please allow location access.'
+        );
+
+      },
+
+      {
+        enableHighAccuracy:true,
+        timeout:10000,
+        maximumAge:60000
+      }
+
+    );
+
+  };
 // =========================
 // CLEAR
 // =========================
