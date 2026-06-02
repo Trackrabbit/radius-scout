@@ -380,37 +380,44 @@ function renderSuggestions(results){
       </div>
     `;
 
-item.onclick = ()=>{
+    item.onclick = ()=>{
 
-  selectedLocation = result;
+      selectedLocation = result;
 
-  document
-    .getElementById('addressInput')
-    .value = result.display_name;
+      document
+        .getElementById('addressInput')
+        .value = result.display_name;
 
-  document
-    .getElementById('matchedAddress')
-    .innerHTML = `
-      <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
-        Selected Address
-      </div>
-      <div>
-        ${result.display_name}
-      </div>
-    `;
+      document
+        .getElementById('matchedAddress')
+        .innerHTML = `
+          <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+            Selected Address
+          </div>
+          <div>
+            ${result.display_name}
+          </div>
+        `;
 
-  container.style.display = 'none';
+      container.style.display = 'none';
 
-  // Give the UI a moment to update
-  setTimeout(() => {
+      setTimeout(() => {
 
-    document
-      .getElementById('searchBtn')
-      .click();
+        document
+          .getElementById('searchBtn')
+          .click();
 
-  }, 100);
+      }, 100);
 
-};
+    };
+
+    container.appendChild(item);
+
+  });
+
+  container.style.display = 'block';
+
+}
 
   // Auto search
   document
