@@ -89,6 +89,39 @@ body{
 
 /* Inputs */
 
+.search-input-row{
+  display:flex;
+  gap:8px;
+}
+
+.search-input-row .autocomplete-wrapper{
+  flex:1;
+}
+
+.location-icon-btn{
+  flex:0 0 50px;
+
+  border:none;
+  border-radius:12px;
+
+  background:#111827;
+  color:white;
+
+  cursor:pointer;
+
+  font-size:18px;
+
+  transition:.2s;
+}
+
+.location-icon-btn:hover{
+  border:1px solid var(--accent);
+}
+
+.location-icon-btn:active{
+  transform:scale(.97);
+}
+
 .search-group{
   display:flex;
   flex-direction:column;
