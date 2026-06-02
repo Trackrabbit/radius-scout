@@ -272,6 +272,21 @@ document
 
   });
 
+document
+  .getElementById('addressInput')
+  .addEventListener('keydown', e => {
+
+    if (e.key === 'Enter') {
+
+      e.preventDefault();
+
+      document
+        .getElementById('searchBtn')
+        .click();
+    }
+
+  });
+
 // =========================
 // HELPERS
 // =========================
@@ -365,24 +380,44 @@ function renderSuggestions(results){
       </div>
     `;
 
-    item.onclick = ()=>{
+item.onclick = ()=>{
 
-      selectedLocation = result;
+  selectedLocation = result;
 
-      document
-        .getElementById('addressInput')
-        .value = result.display_name;
+  document
+    .getElementById('addressInput')
+    .value = result.display_name;
 
-      document
-        .getElementById('matchedAddress')
-        .innerHTML = `
-          <strong>Selected:</strong><br>
-          ${result.display_name}
-        `;
+  document
+    .getElementById('matchedAddress')
+    .innerHTML = `
+      <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+        Selected Address
+      </div>
+      <div>
+        ${result.display_name}
+      </div>
+    `;
 
-      container.style.display = 'none';
+  container.style.display = 'none';
 
-    };
+  // Give the UI a moment to update
+  setTimeout(() => {
+
+    document
+      .getElementById('searchBtn')
+      .click();
+
+  }, 100);
+
+};
+
+  // Auto search
+  document
+    .getElementById('searchBtn')
+    .click();
+
+};
 
     container.appendChild(item);
 
