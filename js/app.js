@@ -169,6 +169,10 @@ let activeFilter = null;
 
 let radiusCircle = null;
 
+let selectedLocation = null;
+
+let autocompleteTimer = null;
+
 // =========================
 // UI
 // =========================
@@ -225,6 +229,50 @@ Object.entries(POI_CONFIG).forEach(([key,poi])=>{
 });
 
 // =========================
+// INPUT LISTENER
+// =========================
+
+document
+  .getElementById('addressInput')
+  .addEventListener('input', e=>{
+
+    selectedLocation = null;
+
+    clearTimeout(autocompleteTimer);
+
+    const query =
+      e.target.value.trim();
+
+    if(query.length < 3){
+
+      document
+        .getElementById('addressSuggestions')
+        .style.display = 'none';
+
+      return;
+    }
+
+    autocompleteTimer =
+      setTimeout(async ()=>{
+
+        try{
+
+          const results =
+            await searchAddresses(query);
+
+          renderSuggestions(results);
+
+        }catch(err){
+
+          console.error(err);
+
+        }
+
+      },300);
+
+  });
+
+// =========================
 // HELPERS
 // =========================
 
@@ -273,6 +321,75 @@ async function geocode(address){
     lat:+data[0].lat,
     lon:+data[0].lon
   };
+}
+
+async function searchAddresses(query){
+
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`
+  );
+
+  return await response.json();
+
+}
+
+function renderSuggestions(results){
+
+  const container =
+    document.getElementById('addressSuggestions');
+
+  if(!results.length){
+
+    container.style.display = 'none';
+
+    return;
+  }
+
+  container.innerHTML = '';
+
+  results.forEach(result=>{
+
+    const item =
+      document.createElement('div');
+
+    item.className =
+      'suggestion-item';
+
+    item.innerHTML = `
+      <div class="suggestion-main">
+        ${result.display_name.split(',')[0]}
+      </div>
+
+      <div class="suggestion-secondary">
+        ${result.display_name}
+      </div>
+    `;
+
+    item.onclick = ()=>{
+
+      selectedLocation = result;
+
+      document
+        .getElementById('addressInput')
+        .value = result.display_name;
+
+      document
+        .getElementById('matchedAddress')
+        .innerHTML = `
+          <strong>Selected:</strong><br>
+          ${result.display_name}
+        `;
+
+      container.style.display = 'none';
+
+    };
+
+    container.appendChild(item);
+
+  });
+
+  container.style.display = 'block';
+
 }
 
 function buildQuery(center, radius, keys){
@@ -423,7 +540,22 @@ document
 
     // Geocode
 
-    const center = await geocode(address);
+    let center;
+
+    if(selectedLocation){
+    
+      center = {
+    
+        lat:+selectedLocation.lat,
+        lon:+selectedLocation.lon
+    
+      };
+    
+    }else{
+    
+      center = await geocode(address);
+    
+    }
 
     map.setView([center.lat, center.lon], 15);
 
@@ -580,3 +712,17 @@ document
     .forEach(el=>el.classList.remove('active'));
 
 };
+
+document.addEventListener('click', e=>{
+
+  if(
+    !e.target.closest('.autocomplete-wrapper')
+  ){
+
+    document
+      .getElementById('addressSuggestions')
+      .style.display = 'none';
+
+  }
+
+});
