@@ -236,6 +236,8 @@ document
   .getElementById('addressInput')
   .addEventListener('input', e=>{
 
+    console.log('INPUT FIRED');
+
     selectedLocation = null;
 
     clearTimeout(autocompleteTimer);
