@@ -1,4 +1,3 @@
-console.log('APP.JS LOADED');
 // =========================
 // CONFIG
 // =========================
@@ -236,8 +235,6 @@ Object.entries(POI_CONFIG).forEach(([key,poi])=>{
 document
   .getElementById('addressInput')
   .addEventListener('input', e=>{
-
-    console.log('INPUT FIRED');
 
     selectedLocation = null;
 
