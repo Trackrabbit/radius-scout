@@ -33,11 +33,21 @@
   </div>
 
   <div class="search-group">
-    <input
-      id="addressInput"
-      type="text"
-      placeholder="Enter address"
-    >
+    <div class="autocomplete-wrapper">
+    
+      <input
+        id="addressInput"
+        type="text"
+        placeholder="Enter address"
+        autocomplete="off"
+      >
+    
+      <div
+        id="addressSuggestions"
+        class="suggestions"
+      ></div>
+    
+    </div>
 
     <select id="radiusSelect">
       <option value="152">500 ft</option>
