@@ -419,21 +419,6 @@ function renderSuggestions(results){
 
 }
 
-  // Auto search
-  document
-    .getElementById('searchBtn')
-    .click();
-
-};
-
-    container.appendChild(item);
-
-  });
-
-  container.style.display = 'block';
-
-}
-
 function buildQuery(center, radius, keys){
 
   let queryParts = [];
