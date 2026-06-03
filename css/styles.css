@@ -493,6 +493,10 @@ button:active,
   margin-bottom:2px;
 }
 
+.footer:hover{
+  opacity:1;
+}
+
 .footer-version{
   margin-top:6px;
 
