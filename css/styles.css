@@ -463,3 +463,32 @@ button:active,
   }
 
 }
+
+/* Footer */
+
+.footer{
+  margin-top:20px;
+  padding-top:14px;
+
+  border-top:1px solid var(--border);
+
+  text-align:center;
+
+  color:var(--muted);
+
+  font-size:11px;
+}
+
+.footer-title{
+  color:var(--text);
+  font-weight:600;
+  margin-bottom:4px;
+}
+
+.footer-text{
+  margin-bottom:4px;
+}
+
+.footer-version{
+  opacity:0.7;
+}
