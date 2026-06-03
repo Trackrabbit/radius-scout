@@ -315,6 +315,14 @@ button:active,
   color:white;
 }
 
+.location-icon-btn{
+  flex:0 0 38px;
+  width:38px;
+  height:38px;
+  padding:0;
+  font-size:15px;
+}
+
 /* Summary */
 
 .summary-grid{
