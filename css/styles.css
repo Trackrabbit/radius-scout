@@ -101,20 +101,16 @@ body{
 
 .location-icon-btn{
   flex:none;
-  width:46px;
+  width:42px;
+  padding:0;
 
   display:flex;
   align-items:center;
   justify-content:center;
 
-  padding:0;
-
   background:#111827;
   border:1px solid var(--border);
   border-radius:12px;
-
-  color:white;
-  font-size:16px;
 }
 
 .location-icon-btn:hover{
