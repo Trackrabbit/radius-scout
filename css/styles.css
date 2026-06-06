@@ -92,6 +92,7 @@ body{
 .search-input-row{
   display:flex;
   gap:8px;
+  align-items:stretch;
 }
 
 .search-input-row .autocomplete-wrapper{
@@ -100,21 +101,20 @@ body{
 
 .location-icon-btn{
   flex:none;
-
-  width:38px;
-  height:38px;
-
-  padding:0;
+  width:46px;
 
   display:flex;
   align-items:center;
   justify-content:center;
 
+  padding:0;
+
   background:#111827;
   border:1px solid var(--border);
-  border-radius:10px;
+  border-radius:12px;
 
-  font-size:14px;
+  color:white;
+  font-size:16px;
 }
 
 .location-icon-btn:hover{
