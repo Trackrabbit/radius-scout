@@ -321,6 +321,40 @@ document
 // HELPERS
 // =========================
 
+function resetMapView(){
+
+  if(navigator.geolocation){
+
+    navigator.geolocation.getCurrentPosition(
+
+      pos => {
+
+        map.setView(
+          [
+            pos.coords.latitude,
+            pos.coords.longitude
+          ],
+          13
+        );
+
+      },
+
+      () => {
+
+        map.setView([20,0],2);
+
+      }
+
+    );
+
+  }else{
+
+    map.setView([20,0],2);
+
+  }
+
+}
+
 function selectedPOI(){
 
   return [...document.querySelectorAll('.poi-chip.active')]
@@ -876,8 +910,11 @@ document
     document.getElementById('addressSuggestions').innerHTML = '';
 
     // Reset matched address panel
-    document.getElementById('matchedAddress').innerHTML =
-      'Enter an address and click Search';
+    document.getElementById('matchedAddress').innerHTML = `
+      <div style="opacity:.7;">
+        Ready for a new search
+      </div>
+    `;
 
     // Reset summary counts
     Object.keys(POI_CONFIG).forEach(key => {
@@ -907,9 +944,11 @@ document
 
       });
 
+    // Close popups
+    map.closePopup();
+    
     // Return map to default view
-    map.setView([20, 0], 2);
-
+    resetMapView();
 };
 
 document.addEventListener('click', e=>{
