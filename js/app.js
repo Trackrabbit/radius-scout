@@ -203,6 +203,8 @@ let selectedLocation = null;
 
 let autocompleteTimer = null;
 
+let matchedAddressBackup = '';
+
 // =========================
 // UI
 // =========================
@@ -364,9 +366,27 @@ function selectedPOI(){
 
 function showLoading(show){
 
-  document
-    .getElementById('loading')
-    .classList.toggle('hidden', !show);
+  const matched =
+    document.getElementById('matchedAddress');
+
+  if(show){
+
+    matchedAddressBackup = matched.innerHTML;
+
+    matched.innerHTML = `
+      <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+        Searching...
+      </div>
+      <div>
+        Finding nearby locations.
+      </div>
+    `;
+
+  } else if(matchedAddressBackup){
+
+    matched.innerHTML = matchedAddressBackup;
+
+  }
 
 }
 
