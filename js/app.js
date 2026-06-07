@@ -152,7 +152,37 @@ function cleanAddress(address) {
 // MAP
 // =========================
 
-const map = L.map('map').setView([32.84,-83.63],12);
+const map = L.map('map');
+
+if (navigator.geolocation) {
+
+  navigator.geolocation.getCurrentPosition(
+
+    pos => {
+
+      map.setView(
+        [
+          pos.coords.latitude,
+          pos.coords.longitude
+        ],
+        13
+      );
+
+    },
+
+    () => {
+
+      map.setView([20,0],2);
+
+    }
+
+  );
+
+} else {
+
+  map.setView([20,0],2);
+
+}
 
 L.tileLayer(
   'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -824,17 +854,61 @@ document
   .getElementById('clearBtn')
   .onclick = ()=>{
 
-  markerLayer.clearLayers();
+    // Clear markers
+    markerLayer.clearLayers();
 
-  if(radiusCircle){
-    map.removeLayer(radiusCircle);
-  }
+    markersByType = {};
 
-  activeFilter = null;
+    // Remove radius circle
+    if(radiusCircle){
+      map.removeLayer(radiusCircle);
+      radiusCircle = null;
+    }
 
-  document
-    .querySelectorAll('.summary-card')
-    .forEach(el=>el.classList.remove('active'));
+    // Clear selected location
+    selectedLocation = null;
+
+    // Clear address field
+    document.getElementById('addressInput').value = '';
+
+    // Clear suggestions
+    document.getElementById('addressSuggestions').style.display = 'none';
+    document.getElementById('addressSuggestions').innerHTML = '';
+
+    // Reset matched address panel
+    document.getElementById('matchedAddress').innerHTML =
+      'Enter an address and click Search';
+
+    // Reset summary counts
+    Object.keys(POI_CONFIG).forEach(key => {
+
+      document.getElementById(`count-${key}`).innerText = '0';
+
+    });
+
+    // Clear active summary filter
+    activeFilter = null;
+
+    document
+      .querySelectorAll('.summary-card')
+      .forEach(el=>el.classList.remove('active'));
+
+    // Reset POI chips to defaults
+    document
+      .querySelectorAll('.poi-chip')
+      .forEach(chip => {
+
+        const key = chip.dataset.key;
+
+        chip.classList.toggle(
+          'active',
+          POI_CONFIG[key].default
+        );
+
+      });
+
+    // Return map to default view
+    map.setView([20, 0], 2);
 
 };
 
