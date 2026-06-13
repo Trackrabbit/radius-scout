@@ -97,35 +97,35 @@ const POI_CONFIG = {
   restaurant:{
     label:'Restaurants',
     icon:'🍽️',
-    default:false,
+    default:true,
     filters:[['amenity','restaurant']]
   },
 
   shop:{
     label:'Stores',
     icon:'🛍️',
-    default:false,
+    default:true,
     filters:[['shop','*']]
   },
 
   cafe:{
     label:'Cafes',
     icon:'☕',
-    default:false,
+    default:true,
     filters:[['amenity','cafe']]
   },
 
   office:{
     label:'Offices',
     icon:'💼',
-    default:false,
+    default:true,
     filters:[['office','*']]
   },
 
   hotel:{
     label:'Hotels',
     icon:'🏨',
-    default:false,
+    default:true,
     filters:[
       ['tourism','hotel'],
       ['tourism','motel'],
