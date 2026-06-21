@@ -467,12 +467,27 @@ Object.entries(grouped).forEach(([groupKey, items]) => {
     if (state === 'partial') indicator = '◐';
   
     header.innerHTML = `
-      <div>${POI_GROUPS[groupKey] || groupKey} ${indicator}</div>
+      <div>
+        ${POI_GROUPS[groupKey] || groupKey}
+        <span class="group-indicator" style="margin-left:6px; color:#94a3b8;"></span>
+      </div>
       <div class="poi-arrow">⌄</div>
     `;
   };
 
-updateHeaderUI();
+const indicator = header.querySelector('.group-indicator');
+
+function updateHeaderUI() {
+
+  const state = getGroupState(items);
+
+  let symbol = '○';
+
+  if (state === 'all') symbol = '●';
+  if (state === 'partial') symbol = '◐';
+
+  indicator.textContent = symbol;
+}
 
 header.onclick = () => {
 
@@ -492,7 +507,17 @@ header.onclick = () => {
   });
 
   // update header state indicator
-  updateHeaderUI();
+  function updateHeaderUI() {
+
+  const state = getGroupState(items);
+
+  let symbol = '○';
+
+  if (state === 'all') symbol = '●';
+  if (state === 'partial') symbol = '◐';
+
+  indicator.textContent = symbol;
+}
 
 };
 
@@ -523,7 +548,17 @@ header.onclick = () => {
       // toggle state
       POI_STATE[key] = !POI_STATE[key];
 
-      updateHeaderUI();
+      function updateHeaderUI() {
+
+      const state = getGroupState(items);
+    
+      let symbol = '○';
+    
+      if (state === 'all') symbol = '●';
+      if (state === 'partial') symbol = '◐';
+    
+      indicator.textContent = symbol;
+    }
     
       // sync UI
       chip.classList.toggle('active', POI_STATE[key]);
