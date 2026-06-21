@@ -7,20 +7,27 @@ const POI_CONFIG = {
   worship:{
     label:'Worship',
     icon:'⛪',
+    groups:['family','community'],
     default:true,
-    filters:[['amenity','place_of_worship']]
+    filters:[
+      ['amenity','place_of_worship']
+    ]
   },
 
   school:{
     label:'Schools',
     icon:'🏫',
+    groups:['family'],
     default:true,
-    filters:[['amenity','school']]
+    filters:[
+      ['amenity','school']
+    ]
   },
 
   college:{
     label:'Colleges',
     icon:'🎓',
+    groups:['family'],
     default:true,
     filters:[
       ['amenity','college'],
@@ -31,62 +38,87 @@ const POI_CONFIG = {
   kindergarten:{
     label:'Kinder',
     icon:'🧒',
+    groups:['family'],
     default:true,
-    filters:[['amenity','kindergarten']]
+    filters:[
+      ['amenity','kindergarten']
+    ]
   },
 
   daycare:{
     label:'Daycare',
     icon:'👶',
+    groups:['family'],
     default:true,
-    filters:[['amenity','childcare']]
+    filters:[
+      ['amenity','childcare']
+    ]
   },
 
   library:{
     label:'Libraries',
     icon:'📚',
+    groups:['family','community'],
     default:true,
-    filters:[['amenity','library']]
+    filters:[
+      ['amenity','library']
+    ]
   },
 
   park:{
     label:'Parks',
     icon:'🌳',
+    groups:['family','recreation'],
     default:true,
-    filters:[['leisure','park']]
+    filters:[
+      ['leisure','park']
+    ]
   },
 
   playground:{
-    label:'Play',
+    label:'Playgrounds',
     icon:'🛝',
+    groups:['family','recreation'],
     default:true,
-    filters:[['leisure','playground']]
+    filters:[
+      ['leisure','playground']
+    ]
   },
 
   pool:{
     label:'Pools',
     icon:'🏊',
+    groups:['recreation'],
     default:true,
-    filters:[['leisure','swimming_pool']]
+    filters:[
+      ['leisure','swimming_pool']
+    ]
   },
 
   bus_stop:{
     label:'Bus Stops',
     icon:'🚌',
+    groups:['transportation'],
     default:true,
-    filters:[['highway','bus_stop']]
+    filters:[
+      ['highway','bus_stop']
+    ]
   },
 
   bus_station:{
     label:'Bus Stations',
     icon:'🚏',
+    groups:['transportation'],
     default:true,
-    filters:[['amenity','bus_station']]
+    filters:[
+      ['amenity','bus_station']
+    ]
   },
 
   apartments:{
     label:'Apartments',
     icon:'🏢',
+    groups:['business','realestate'],
     default:true,
     filters:[
       ['building','apartments'],
@@ -97,41 +129,158 @@ const POI_CONFIG = {
   restaurant:{
     label:'Restaurants',
     icon:'🍽️',
-    default:true,
-    filters:[['amenity','restaurant']]
-  },
-
-  shop:{
-    label:'Stores',
-    icon:'🛍️',
-    default:true,
-    filters:[['shop','*']]
+    groups:['dining','business'],
+    default:false,
+    filters:[
+      ['amenity','restaurant']
+    ]
   },
 
   cafe:{
     label:'Cafes',
     icon:'☕',
-    default:true,
-    filters:[['amenity','cafe']]
+    groups:['dining'],
+    default:false,
+    filters:[
+      ['amenity','cafe']
+    ]
+  },
+
+  shop:{
+    label:'Stores',
+    icon:'🛍️',
+    groups:['dining','business'],
+    default:false,
+    filters:[
+      ['shop','*']
+    ]
   },
 
   office:{
     label:'Offices',
     icon:'💼',
-    default:true,
-    filters:[['office','*']]
+    groups:['business'],
+    default:false,
+    filters:[
+      ['office','*']
+    ]
   },
 
   hotel:{
     label:'Hotels',
     icon:'🏨',
-    default:true,
+    groups:['business'],
+    default:false,
     filters:[
       ['tourism','hotel'],
       ['tourism','motel'],
       ['tourism','guest_house']
     ]
+  },
+
+  hospital:{
+    label:'Hospitals',
+    icon:'🏥',
+    groups:['essential'],
+    default:false,
+    filters:[
+      ['amenity','hospital']
+    ]
+  },
+
+  pharmacy:{
+    label:'Pharmacies',
+    icon:'💊',
+    groups:['essential'],
+    default:false,
+    filters:[
+      ['amenity','pharmacy']
+    ]
+  },
+
+  police:{
+    label:'Police',
+    icon:'👮',
+    groups:['essential'],
+    default:false,
+    filters:[
+      ['amenity','police']
+    ]
+  },
+
+  fire_station:{
+    label:'Fire Stations',
+    icon:'🚒',
+    groups:['essential'],
+    default:false,
+    filters:[
+      ['amenity','fire_station']
+    ]
+  },
+
+  fuel:{
+    label:'Gas Stations',
+    icon:'⛽',
+    groups:['essential','transportation'],
+    default:false,
+    filters:[
+      ['amenity','fuel']
+    ]
+  },
+
+  grocery:{
+    label:'Groceries',
+    icon:'🛒',
+    groups:['essential','family'],
+    default:false,
+    filters:[
+      ['shop','supermarket']
+    ]
   }
+
+};
+
+// =========================
+// PRESETS
+// =========================
+
+const POI_PRESETS = {
+
+  family:[
+    'school',
+    'college',
+    'kindergarten',
+    'daycare',
+    'library',
+    'park',
+    'playground',
+    'pool',
+    'worship',
+    'grocery'
+  ],
+
+  essentials:[
+    'hospital',
+    'pharmacy',
+    'police',
+    'fire_station',
+    'fuel',
+    'grocery'
+  ],
+
+  investor:[
+    'apartments',
+    'restaurant',
+    'shop',
+    'bus_stop',
+    'bus_station'
+  ],
+
+  recreation:[
+    'park',
+    'playground',
+    'pool'
+  ]
 
 };
 
