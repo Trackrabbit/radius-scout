@@ -332,6 +332,19 @@ function groupPOIs() {
   return groups;
 }
 
+function getGroupState(groupItems) {
+
+  let activeCount = 0;
+
+  groupItems.forEach(poi => {
+    if (POI_STATE[poi.key]) activeCount++;
+  });
+
+  if (activeCount === 0) return 'none';
+  if (activeCount === groupItems.length) return 'all';
+  return 'partial';
+}
+
 // =========================
 // ADDRESS CLEANUP
 // =========================
@@ -444,29 +457,44 @@ Object.entries(grouped).forEach(([groupKey, items]) => {
   const header = document.createElement('div');
   header.className = 'poi-group-header';
 
-  header.innerHTML = `
-    <div>${POI_GROUPS[groupKey] || groupKey}</div>
-    <div class="poi-arrow">⌄</div>
-  `;
-
-   header.onclick = () => {
+  const updateHeaderUI = () => {
   
-    const isOpening = !group.classList.contains('open');
-    group.classList.toggle('open');
+    const state = getGroupState(items);
   
-    const chips = content.querySelectorAll('.poi-chip');
+    let indicator = '○';
   
-    chips.forEach(chip => {
+    if (state === 'all') indicator = '●';
+    if (state === 'partial') indicator = '◐';
   
-      const key = chip.dataset.key;
-  
-      POI_STATE[key] = isOpening;
-  
-      chip.classList.toggle('active', isOpening);
-  
-    });
-  
+    header.innerHTML = `
+      <div>${POI_GROUPS[groupKey] || groupKey} ${indicator}</div>
+      <div class="poi-arrow">⌄</div>
+    `;
   };
+
+updateHeaderUI();
+
+header.onclick = () => {
+
+  const isOpening = !group.classList.contains('open');
+  group.classList.toggle('open');
+
+  items.forEach(poi => {
+
+    POI_STATE[poi.key] = isOpening;
+
+  });
+
+  // sync chips
+  content.querySelectorAll('.poi-chip').forEach(chip => {
+    const key = chip.dataset.key;
+    chip.classList.toggle('active', POI_STATE[key]);
+  });
+
+  // update header state indicator
+  updateHeaderUI();
+
+};
 
   // =========================
   // CONTENT GRID
@@ -494,6 +522,8 @@ Object.entries(grouped).forEach(([groupKey, items]) => {
     
       // toggle state
       POI_STATE[key] = !POI_STATE[key];
+
+      updateHeaderUI();
     
       // sync UI
       chip.classList.toggle('active', POI_STATE[key]);
