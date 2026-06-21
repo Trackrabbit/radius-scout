@@ -285,6 +285,30 @@ const POI_PRESETS = {
 };
 
 // =========================
+// POI GROUPS
+// =========================
+
+const POI_GROUPS = {
+
+  family: "🏠 Family & Community",
+
+  essential: "🚨 Essential Services",
+
+  transportation: "🚌 Transportation",
+
+  dining: "🍔 Dining & Shopping",
+
+  business: "🏢 Housing & Business",
+
+  recreation: "🌳 Recreation",
+
+  community: "🤝 Community",
+
+  realestate: "🏠 Real Estate"
+
+};
+
+// =========================
 // ADDRESS CLEANUP
 // =========================
 
