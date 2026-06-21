@@ -1151,6 +1151,22 @@ document
             lon
           };
 
+          reverseGeocode(
+            selectedLocation.lat,
+            selectedLocation.lon
+          ).then(address => {
+          
+            document.getElementById('addressInput').value = address;
+          
+            document.getElementById('matchedAddress').innerHTML = `
+              <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+                Shared Location
+              </div>
+              <div>${address}</div>
+            `;
+          
+          });
+
           map.setView([lat, lon], 16);
 
           const address =
