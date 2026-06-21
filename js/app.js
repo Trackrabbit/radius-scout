@@ -1214,18 +1214,21 @@ document
       .forEach(el=>el.classList.remove('active'));
 
     // Reset POI chips to defaults
-    document
-      .querySelectorAll('.poi-chip')
-      .forEach(chip => {
-
-        const key = chip.dataset.key;
-
-        chip.classList.toggle(
-          'active',
-          POI_CONFIG[key].default
-        );
-
-      });
+    
+    document.querySelectorAll('.poi-chip').forEach(chip => {
+    
+      const key = chip.dataset.key;
+    
+      const isDefault = POI_CONFIG[key].default;
+    
+      chip.classList.toggle('active', isDefault);
+    
+    });
+    
+    // Also collapse all groups (important UX reset)
+    document.querySelectorAll('.poi-group').forEach(group => {
+      group.classList.remove('open');
+    });
 
     // Close popups
     map.closePopup();
