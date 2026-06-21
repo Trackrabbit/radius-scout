@@ -402,6 +402,13 @@ let autocompleteTimer = null;
 
 let matchedAddressBackup = '';
 
+const POI_STATE = {};
+
+// initialize state from config defaults
+Object.keys(POI_CONFIG).forEach(key => {
+  POI_STATE[key] = POI_CONFIG[key].default || false;
+});
+
 // =========================
 // UI
 // =========================
@@ -442,22 +449,20 @@ Object.entries(grouped).forEach(([groupKey, items]) => {
     <div class="poi-arrow">⌄</div>
   `;
 
-  header.onclick = () => {
+   header.onclick = () => {
   
     const isOpening = !group.classList.contains('open');
-  
     group.classList.toggle('open');
   
-    // Get all chips inside this group
     const chips = content.querySelectorAll('.poi-chip');
   
     chips.forEach(chip => {
   
-      if (isOpening) {
-        chip.classList.add('active');
-      } else {
-        chip.classList.remove('active');
-      }
+      const key = chip.dataset.key;
+  
+      POI_STATE[key] = isOpening;
+  
+      chip.classList.toggle('active', isOpening);
   
     });
   
@@ -484,9 +489,16 @@ Object.entries(grouped).forEach(([groupKey, items]) => {
     chip.innerHTML = `${poi.icon} ${poi.label}`;
 
     chip.onclick = () => {
-      chip.classList.toggle('active');
+    
+      const key = chip.dataset.key;
+    
+      // toggle state
+      POI_STATE[key] = !POI_STATE[key];
+    
+      // sync UI
+      chip.classList.toggle('active', POI_STATE[key]);
+    
     };
-
     content.appendChild(chip);
   });
 
@@ -621,10 +633,9 @@ function resetMapView(){
 }
 
 function selectedPOI(){
-
-  return [...document.querySelectorAll('.poi-chip.active')]
-    .map(el=>el.dataset.key);
-
+  return Object.entries(POI_STATE)
+    .filter(([_, val]) => val)
+    .map(([key]) => key);
 }
 
 function showLoading(show){
@@ -1209,20 +1220,21 @@ document
     // Clear active summary filter
     activeFilter = null;
 
-    document
-      .querySelectorAll('.summary-card')
-      .forEach(el=>el.classList.remove('active'));
-
-    // Reset POI chips to defaults
+    Object.keys(POI_STATE).forEach(key => {
+      POI_STATE[key] = POI_CONFIG[key].default || false;
+    });
     
     document.querySelectorAll('.poi-chip').forEach(chip => {
     
       const key = chip.dataset.key;
     
-      const isDefault = POI_CONFIG[key].default;
+      chip.classList.toggle('active', POI_STATE[key]);
     
-      chip.classList.toggle('active', isDefault);
+    });
     
+    // Close all accordion groups
+    document.querySelectorAll('.poi-group').forEach(group => {
+      group.classList.remove('open');
     });
     
     // Also collapse all groups (important UX reset)
