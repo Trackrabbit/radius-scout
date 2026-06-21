@@ -309,6 +309,30 @@ const POI_GROUPS = {
 };
 
 // =========================
+// GROUP POI UTILITY
+// =========================
+
+function groupPOIs() {
+  const groups = {};
+
+  Object.entries(POI_CONFIG).forEach(([key, poi]) => {
+
+    poi.groups.forEach(group => {
+
+      if (!groups[group]) {
+        groups[group] = [];
+      }
+
+      groups[group].push({ key, ...poi });
+
+    });
+
+  });
+
+  return groups;
+}
+
+// =========================
 // ADDRESS CLEANUP
 // =========================
 
@@ -385,51 +409,100 @@ let matchedAddressBackup = '';
 const poiContainer = document.getElementById('poiContainer');
 const summaryGrid = document.getElementById('summaryGrid');
 
-Object.entries(POI_CONFIG).forEach(([key,poi])=>{
+// clear containers (important if re-render ever happens later)
 
-  // Chips
+poiContainer.innerHTML = '';
+summaryGrid.innerHTML = '';
 
-  const chip = document.createElement('div');
+const grouped = groupPOIs();
 
-  chip.className = 'poi-chip';
 
-  if(poi.default){
-    chip.classList.add('active');
-  }
+// Track summary cards so we can still update counts
 
-  chip.dataset.key = key;
+const summaryCards = {};
 
-  chip.innerHTML = `${poi.icon} ${poi.label}`;
+Object.entries(grouped).forEach(([groupKey, items]) => {
 
-  chip.onclick = ()=>{
+  // =========================
+  // GROUP WRAPPER
+  // =========================
+  
+  const group = document.createElement('div');
+  group.className = 'poi-group';
 
-    chip.classList.toggle('active');
+  // =========================
+  // HEADER
+  // =========================
+  
+  const header = document.createElement('div');
+  header.className = 'poi-group-header';
 
+  header.innerHTML = `
+    <div>${POI_GROUPS[groupKey] || groupKey}</div>
+    <div class="poi-arrow">⌄</div>
+  `;
+
+  header.onclick = () => {
+    group.classList.toggle('open');
   };
 
-  poiContainer.appendChild(chip);
+  // =========================
+  // CONTENT GRID
+  // =========================
+  
+  const content = document.createElement('div');
+  content.className = 'poi-group-content';
 
-  // Summary cards
+  items.forEach(poi => {
+
+    const chip = document.createElement('div');
+    chip.className = 'poi-chip';
+
+    if (poi.default) {
+      chip.classList.add('active');
+    }
+
+    chip.dataset.key = poi.key;
+
+    chip.innerHTML = `${poi.icon} ${poi.label}`;
+
+    chip.onclick = () => {
+      chip.classList.toggle('active');
+    };
+
+    content.appendChild(chip);
+  });
+
+  group.appendChild(header);
+  group.appendChild(content);
+  poiContainer.appendChild(group);
+
+});
+
+// =========================
+// SUMMARY CARDS (unchanged but preserved)
+// =========================
+
+Object.entries(POI_CONFIG).forEach(([key, poi]) => {
 
   const card = document.createElement('div');
-
   card.className = 'summary-card';
-
   card.id = `summary-${key}`;
 
   card.innerHTML = `
     <div class="summary-label">
       ${poi.icon} ${poi.label}
     </div>
-
     <div class="summary-value" id="count-${key}">
       0
     </div>
   `;
 
-  card.onclick = ()=>toggleFilter(key);
+  card.onclick = () => toggleFilter(key);
 
   summaryGrid.appendChild(card);
+
+  summaryCards[key] = card;
 
 });
 
