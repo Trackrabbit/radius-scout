@@ -443,88 +443,37 @@ const summaryCards = {};
 
 Object.entries(grouped).forEach(([groupKey, items]) => {
 
-  // =========================
-  // GROUP WRAPPER
-  // =========================
-  
   const group = document.createElement('div');
   group.className = 'poi-group';
 
-  // =========================
   // HEADER
-  // =========================
-  
   const header = document.createElement('div');
   header.className = 'poi-group-header';
 
-  const updateHeaderUI = () => {
-  
-    const state = getGroupState(items);
-  
-    let indicator = '○';
-  
-    if (state === 'all') indicator = '●';
-    if (state === 'partial') indicator = '◐';
-  
-    header.innerHTML = `
-      <div>
-        ${POI_GROUPS[groupKey] || groupKey}
-        <span class="group-indicator" style="margin-left:6px; color:#94a3b8;"></span>
-      </div>
-      <div class="poi-arrow">⌄</div>
-    `;
-  };
+  header.innerHTML = `
+    <div>
+      ${POI_GROUPS[groupKey] || groupKey}
+      <span class="group-indicator" style="margin-left:6px;color:#94a3b8;"></span>
+    </div>
+    <div class="poi-arrow">⌄</div>
+  `;
 
-const indicator = header.querySelector('.group-indicator');
+  const indicator = header.querySelector('.group-indicator');
 
-function updateHeaderUI() {
-
-  const state = getGroupState(items);
-
-  let symbol = '○';
-
-  if (state === 'all') symbol = '●';
-  if (state === 'partial') symbol = '◐';
-
-  indicator.textContent = symbol;
-}
-
-header.onclick = () => {
-
-  const isOpening = !group.classList.contains('open');
-  group.classList.toggle('open');
-
-  items.forEach(poi => {
-
-    POI_STATE[poi.key] = isOpening;
-
-  });
-
-  // sync chips
-  content.querySelectorAll('.poi-chip').forEach(chip => {
-    const key = chip.dataset.key;
-    chip.classList.toggle('active', POI_STATE[key]);
-  });
-
-  // update header state indicator
   function updateHeaderUI() {
 
-  const state = getGroupState(items);
+    const state = getGroupState(items);
 
-  let symbol = '○';
+    let symbol = '○';
 
-  if (state === 'all') symbol = '●';
-  if (state === 'partial') symbol = '◐';
+    if (state === 'all') symbol = '●';
+    if (state === 'partial') symbol = '◐';
 
-  indicator.textContent = symbol;
-}
+    indicator.textContent = symbol;
 
-};
+  }
 
-  // =========================
-  // CONTENT GRID
-  // =========================
-  
+  // CONTENT
   const content = document.createElement('div');
   content.className = 'poi-group-content';
 
@@ -532,43 +481,42 @@ header.onclick = () => {
 
     const chip = document.createElement('div');
     chip.className = 'poi-chip';
+    chip.dataset.key = poi.key;
 
-    if (poi.default) {
+    if (POI_STATE[poi.key]) {
       chip.classList.add('active');
     }
-
-    chip.dataset.key = poi.key;
 
     chip.innerHTML = `${poi.icon} ${poi.label}`;
 
     chip.onclick = () => {
-    
-      const key = chip.dataset.key;
-    
-      // toggle state
-      POI_STATE[key] = !POI_STATE[key];
 
-      function updateHeaderUI() {
+      POI_STATE[poi.key] = !POI_STATE[poi.key];
 
-      const state = getGroupState(items);
-    
-      let symbol = '○';
-    
-      if (state === 'all') symbol = '●';
-      if (state === 'partial') symbol = '◐';
-    
-      indicator.textContent = symbol;
-    }
-    
-      // sync UI
-      chip.classList.toggle('active', POI_STATE[key]);
-    
+      chip.classList.toggle(
+        'active',
+        POI_STATE[poi.key]
+      );
+
+      updateHeaderUI();
+
     };
+
     content.appendChild(chip);
+
   });
+
+  header.onclick = () => {
+
+    group.classList.toggle('open');
+
+  };
+
+  updateHeaderUI();
 
   group.appendChild(header);
   group.appendChild(content);
+
   poiContainer.appendChild(group);
 
 });
