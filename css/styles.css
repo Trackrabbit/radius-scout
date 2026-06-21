@@ -237,30 +237,102 @@ select:focus{
   color:var(--muted);
 }
 
-/* POI Chips */
+/* ==========================================
+   POI ACCORDIONS
+========================================== */
 
-.poi-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
+.poi-group{
+  margin-bottom:12px;
 }
 
+.poi-group-header{
+
+  background:#111827;
+  border:1px solid var(--border);
+  border-radius:12px;
+
+  padding:12px 14px;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  cursor:pointer;
+
+  font-size:14px;
+  font-weight:600;
+
+  transition:.2s ease;
+}
+
+.poi-group-header:hover{
+  border-color:var(--accent);
+}
+
+.poi-arrow{
+  color:var(--muted);
+  transition:.25s ease;
+}
+
+.poi-group.open .poi-arrow{
+  transform:rotate(180deg);
+}
+
+/* collapsed by default */
+
+.poi-group-content{
+
+  display:grid;
+  grid-template-columns:1fr 1fr;
+
+  gap:8px;
+
+  margin-top:8px;
+
+  max-height:0;
+
+  overflow:hidden;
+
+  opacity:0;
+
+  transition:
+    max-height .3s ease,
+    opacity .2s ease;
+}
+
+/* expanded */
+
+.poi-group.open .poi-group-content{
+
+  max-height:600px;
+
+  opacity:1;
+}
+
+
+/* ==========================================
+   POI CHIPS
+========================================== */
+
 .poi-chip{
+
   padding:10px;
 
   border-radius:999px;
 
   background:#111827;
+
   border:1px solid transparent;
 
   text-align:center;
 
   cursor:pointer;
 
-  transition:0.2s ease;
+  user-select:none;
 
   font-size:13px;
-  user-select:none;
+
+  transition:.2s ease;
 }
 
 .poi-chip:hover{
@@ -269,8 +341,25 @@ select:focus{
 
 .poi-chip.active{
   background:var(--accent);
+  border-color:var(--accent);
 }
 
+/* optional count badge */
+
+.poi-badge{
+
+  background:#1f2937;
+
+  color:var(--muted);
+
+  border-radius:999px;
+
+  padding:2px 8px;
+
+  font-size:11px;
+
+  margin-left:8px;
+}
 /* Buttons */
 
 .button-row{
@@ -440,8 +529,8 @@ button:active,
 
   /* Cleaner stacking */
 
-  .poi-grid{
-    grid-template-columns:1fr 1fr;
+  .poi-group-content{
+      grid-template-columns:1fr 1fr;
   }
 
   .summary-grid{
