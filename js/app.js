@@ -944,12 +944,14 @@ document
   try{
 
     const address = cleanAddress(
-      document.getElementById('addressInput').value
+        document.getElementById('addressInput').value
     );
-
-    if(!address){
-      alert('Enter an address');
-      return;
+    
+    // If we already have coordinates from URL or location button,
+    // don't require an address.
+    if (!address && !selectedLocation) {
+        alert('Enter an address');
+        return;
     }
 
     const radius =
