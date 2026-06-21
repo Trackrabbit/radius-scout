@@ -443,7 +443,24 @@ Object.entries(grouped).forEach(([groupKey, items]) => {
   `;
 
   header.onclick = () => {
+  
+    const isOpening = !group.classList.contains('open');
+  
     group.classList.toggle('open');
+  
+    // Get all chips inside this group
+    const chips = content.querySelectorAll('.poi-chip');
+  
+    chips.forEach(chip => {
+  
+      if (isOpening) {
+        chip.classList.add('active');
+      } else {
+        chip.classList.remove('active');
+      }
+  
+    });
+  
   };
 
   // =========================
