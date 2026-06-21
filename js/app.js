@@ -703,6 +703,23 @@ function selectedPOI(){
     .map(([key]) => key);
 }
 
+function updateURLState(center, radius) {
+
+  const params = new URLSearchParams();
+
+  params.set('lat', center.lat);
+  params.set('lon', center.lon);
+  params.set('radius', radius);
+  params.set('poi', selectedPOI().join(','));
+
+  history.replaceState(
+    {},
+    '',
+    `${window.location.pathname}?${params.toString()}`
+  );
+
+}
+
 function showLoading(show){
 
   const matched =
@@ -1059,6 +1076,8 @@ document
       selected
     );
 
+    updateURLState(center, radius);
+
     // Render
 
     results.forEach(item=>{
@@ -1314,6 +1333,60 @@ document
     resetMapView();
 };
 
+function loadURLState() {
+
+  const params = new URLSearchParams(window.location.search);
+
+  const lat = params.get('lat');
+  const lon = params.get('lon');
+  const radius = params.get('radius');
+  const poi = params.get('poi');
+
+  if (!lat || !lon) return;
+
+  selectedLocation = {
+    lat: Number(lat),
+    lon: Number(lon)
+  };
+
+  if (radius) {
+    document.getElementById('radiusSelect').value = radius;
+  }
+
+  // reset all POIs
+  Object.keys(POI_STATE).forEach(key => {
+    POI_STATE[key] = false;
+  });
+
+  if (poi) {
+
+    poi.split(',').forEach(key => {
+
+      if (POI_STATE.hasOwnProperty(key)) {
+        POI_STATE[key] = true;
+      }
+
+    });
+
+  }
+
+  // sync chips
+  document.querySelectorAll('.poi-chip').forEach(chip => {
+
+    const key = chip.dataset.key;
+
+    chip.classList.toggle(
+      'active',
+      POI_STATE[key]
+    );
+
+  });
+
+  // trigger search
+  document.getElementById('searchBtn').click();
+
+}
+
 document.addEventListener('click', e=>{
 
   if(
@@ -1327,3 +1400,5 @@ document.addEventListener('click', e=>{
   }
 
 });
+
+loadURLState();
