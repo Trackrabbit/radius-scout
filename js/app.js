@@ -1139,45 +1139,29 @@ document
     navigator.geolocation.getCurrentPosition(
 
       async position => {
-
+  
         try{
-
+      
           const lat =
             position.coords.latitude;
-
+      
           const lon =
             position.coords.longitude;
-
+      
           selectedLocation = {
             lat,
             lon
           };
-
-          reverseGeocode(
-            selectedLocation.lat,
-            selectedLocation.lon
-          ).then(address => {
-          
-            document.getElementById('addressInput').value = address;
-          
-            document.getElementById('matchedAddress').innerHTML = `
-              <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
-                Shared Location
-              </div>
-              <div>${address}</div>
-            `;
-          
-          });
-
+      
           map.setView([lat, lon], 16);
-
+      
           const address =
             await reverseGeocode(lat, lon);
-
+      
           document
             .getElementById('addressInput')
             .value = address;
-
+      
           document
             .getElementById('matchedAddress')
             .innerHTML = `
@@ -1188,21 +1172,21 @@ document
                 ${address}
               </div>
             `;
-
+      
           document
             .getElementById('searchBtn')
             .click();
-
+      
         }catch(err){
-
+      
           console.error(err);
-
+      
         }finally{
-
+      
           showLoading(false);
-
+      
         }
-
+      
       },
 
       error => {
@@ -1286,11 +1270,6 @@ document
     document.querySelectorAll('.poi-group').forEach(group => {
       group.classList.remove('open');
     });
-    
-    // Also collapse all groups (important UX reset)
-    document.querySelectorAll('.poi-group').forEach(group => {
-      group.classList.remove('open');
-    });
 
     // Close popups
     map.closePopup();
@@ -1319,7 +1298,7 @@ function loadURLState() {
     document.getElementById('radiusSelect').value = radius;
   }
 
-  // reset all POIs
+  // Reset all POIs
   Object.keys(POI_STATE).forEach(key => {
     POI_STATE[key] = false;
   });
@@ -1336,7 +1315,7 @@ function loadURLState() {
 
   }
 
-  // sync chips
+  // Sync chips
   document.querySelectorAll('.poi-chip').forEach(chip => {
 
     const key = chip.dataset.key;
@@ -1348,23 +1327,25 @@ function loadURLState() {
 
   });
 
-  // trigger search
-  document.getElementById('searchBtn').click();
+  // Show Shared Location
+  reverseGeocode(
+    selectedLocation.lat,
+    selectedLocation.lon
+  ).then(address => {
+
+    document.getElementById('addressInput').value = address;
+
+    document.getElementById('matchedAddress').innerHTML = `
+      <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+        Shared Location
+      </div>
+      <div>${address}</div>
+    `;
+
+    document.getElementById('searchBtn').click();
+
+  });
 
 }
-
-document.addEventListener('click', e=>{
-
-  if(
-    !e.target.closest('.autocomplete-wrapper')
-  ){
-
-    document
-      .getElementById('addressSuggestions')
-      .style.display = 'none';
-
-  }
-
-});
 
 loadURLState();
