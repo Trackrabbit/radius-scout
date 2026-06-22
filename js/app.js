@@ -995,6 +995,95 @@ function matchPOI(tags){
 
 }
 
+function distanceMiles(lat1, lon1, lat2, lon2) {
+
+  const R = 3958.8;
+
+  const dLat =
+    (lat2-lat1) * Math.PI / 180;
+
+  const dLon =
+    (lon2-lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLon/2)**2;
+
+  return (
+    R * 2 *
+    Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1-a)
+    )
+  );
+
+}
+
+function buildPopup(item, type, center) {
+
+  const tags = item.tags || {};
+
+  const distance = distanceMiles(
+    center.lat,
+    center.lon,
+    item.lat || item.center?.lat,
+    item.lon || item.center?.lon
+  ).toFixed(2);
+
+  return `
+    <div class="popup-card">
+
+      <div class="popup-title">
+        ${POI_CONFIG[type].icon}
+        ${tags.name || POI_CONFIG[type].label}
+      </div>
+
+      ${
+        tags['addr:housenumber'] || tags['addr:street']
+          ? `
+            <div class="popup-line">
+              📍
+              ${tags['addr:housenumber'] || ''}
+              ${tags['addr:street'] || ''}
+            </div>
+          `
+          : ''
+      }
+
+      ${
+        tags.phone
+          ? `
+            <div class="popup-line">
+              📞 ${tags.phone}
+            </div>
+          `
+          : ''
+      }
+
+      ${
+        tags.website
+          ? `
+            <div class="popup-line">
+              🌐
+              <a href="${tags.website}"
+                 target="_blank">
+                 Website
+              </a>
+            </div>
+          `
+          : ''
+      }
+
+      <div class="popup-line">
+        📏 ${distance} mi away
+      </div>
+
+    </div>
+  `;
+}
+
 // =========================
 // FILTER
 // =========================
@@ -1175,11 +1264,13 @@ document
         }
       );
 
-      marker.bindPopup(`
-        <strong>
-          ${item.tags?.name || POI_CONFIG[type].label}
-        </strong>
-      `);
+      marker.bindPopup(
+        buildPopup(
+          item,
+          type,
+          center
+        )
+      );
 
       markersByType[type].push(marker);
 
