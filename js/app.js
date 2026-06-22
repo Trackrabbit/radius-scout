@@ -694,15 +694,42 @@ function showLoading(show){
 
 }
 
-async function reverseGeocode(lat, lon){
+async function reverseGeocode(lat, lon) {
 
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
-  );
+  const NOMINATIM_SERVERS = [
+    'https://nominatim.openstreetmap.org',
+    'https://nominatim.geocoding.ai'
+  ];
 
-  const data = await response.json();
+  for (const server of NOMINATIM_SERVERS) {
 
-  return data.display_name || '';
+    try {
+
+      const response = await fetch(
+        `${server}/reverse?format=json&lat=${lat}&lon=${lon}`
+      );
+
+      const text = await response.text();
+
+      if (!text.startsWith('{')) {
+        throw new Error();
+      }
+
+      const data = JSON.parse(text);
+
+      return data.display_name || '';
+
+    }
+    catch (err) {
+
+      console.warn(`Reverse geocoder failed: ${server}`);
+
+    }
+
+  }
+
+  return '';
+
 }
 
 async function geocode(address){
@@ -711,10 +738,27 @@ async function geocode(address){
     `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`
   );
 
-  const data = await response.json();
+  const text = await response.text();
 
-  if(!data.length){
+  let data;
+  
+  try {
+  
+    data = JSON.parse(text);
+  
+  }
+  catch {
+  
+    throw new Error(
+      'Address service is busy. Please try again.'
+    );
+  
+  }
+  
+  if (!data.length) {
+  
     throw new Error('Address not found');
+  
   }
 
   const matchedAddress =
@@ -856,21 +900,94 @@ out center;
 
 }
 
-async function fetchPOI(center, radius, keys){
+async function fetchPOI(center, radius, keys) {
 
   const query = buildQuery(center, radius, keys);
 
-  const response = await fetch(
-    'https://overpass-api.de/api/interpreter',
-    {
-      method:'POST',
-      body:query
+  for (const server of OVERPASS_SERVERS) {
+
+    try {
+
+      const response = await fetch(server, {
+        method: 'POST',
+        body: query
+      });
+
+      const text = await response.text();
+
+      // Sometimes Overpass returns XML or HTML instead of JSON
+      if (!text.startsWith('{')) {
+        throw new Error('Non-JSON response');
+      }
+
+      const data = JSON.parse(text);
+
+      return data.elements || [];
+
     }
+    catch (err) {
+
+      console.warn(
+        `Overpass server failed: ${server}`,
+        err
+      );
+
+    }
+
+  }
+
+  throw new Error(
+    'Map data services are busy. Please try again in a few moments.'
   );
 
-  const data = await response.json();
+}
 
-  return data.elements || [];
+async function fetchPOI(center, radius, keys) {
+
+  const query = buildQuery(center, radius, keys);
+  const OVERPASS_SERVERS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://lz4.overpass-api.de/api/interpreter'
+  ];
+
+  for (const server of OVERPASS_SERVERS) {
+
+    console.log(`Trying ${server}`);
+    
+    try {
+
+      const response = await fetch(server, {
+        method: 'POST',
+        body: query
+      });
+
+      const text = await response.text();
+
+      // Sometimes Overpass returns XML or HTML instead of JSON
+      if (!text.startsWith('{')) {
+        throw new Error('Non-JSON response');
+      }
+
+      const data = JSON.parse(text);
+
+      return data.elements || [];
+
+    }
+    catch (err) {
+
+      console.warn(
+        `Overpass server failed: ${server}`,
+        err
+      );
+
+    }
+
+  }
+
+  throw new Error(
+    'Map data services are busy. Please try again in a few moments.'
+  );
 
 }
 
