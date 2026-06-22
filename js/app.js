@@ -732,53 +732,63 @@ async function reverseGeocode(lat, lon) {
 
 }
 
-async function geocode(address){
+async function geocode(address) {
 
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`
+  const NOMINATIM_SERVERS = [
+    'https://nominatim.openstreetmap.org',
+    'https://nominatim.geocoding.ai'
+  ];
+
+  for (const server of NOMINATIM_SERVERS) {
+
+    try {
+
+      const response = await fetch(
+        `${server}/search?format=json&limit=1&q=${encodeURIComponent(address)}`
+      );
+
+      const text = await response.text();
+
+      if (!text.startsWith('[')) {
+        throw new Error('Non-JSON response');
+      }
+
+      const data = JSON.parse(text);
+
+      if (!data.length) {
+        continue;
+      }
+
+      document.getElementById('matchedAddress').innerHTML = `
+        <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+          Matched Address
+        </div>
+        <div>
+          ${data[0].display_name}
+        </div>
+      `;
+
+      return {
+        lat: Number(data[0].lat),
+        lon: Number(data[0].lon)
+      };
+
+    }
+    catch (err) {
+
+      console.warn(
+        `Geocoder failed: ${server}`,
+        err
+      );
+
+    }
+
+  }
+
+  throw new Error(
+    'Address service is temporarily unavailable.'
   );
 
-  const text = await response.text();
-
-  let data;
-  
-  try {
-  
-    data = JSON.parse(text);
-  
-  }
-  catch {
-  
-    throw new Error(
-      'Address service is busy. Please try again.'
-    );
-  
-  }
-  
-  if (!data.length) {
-  
-    throw new Error('Address not found');
-  
-  }
-
-  const matchedAddress =
-    document.getElementById('matchedAddress');
-
-  matchedAddress.style.display = 'block';
-
-  matchedAddress.innerHTML = `
-    <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
-      Matched Address
-    </div>
-    <div>
-      ${data[0].display_name}
-    </div>
-  `;
-
-  return {
-    lat:+data[0].lat,
-    lon:+data[0].lon
-  };
 }
 
 async function searchAddresses(query){
