@@ -608,6 +608,25 @@ document
   });
 
 // =========================
+// SERVER ARRAYS
+// =========================
+
+  const NOMINATIM_SERVERS = [
+    'https://nominatim.openstreetmap.org',
+    'https://nominatim.geocoding.ai'
+  ];
+
+  const OVERPASS_SERVERS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://lz4.overpass-api.de/api/interpreter'
+  ];
+
+// const PROPERTY_PROVIDERS = [ ... ]; // Phase 2
+
+// const DEMOGRAPHIC_PROVIDERS = [ ... ]; // Phase 2
+
+// =========================
 // HELPERS
 // =========================
 
@@ -696,11 +715,6 @@ function showLoading(show){
 
 async function reverseGeocode(lat, lon) {
 
-  const NOMINATIM_SERVERS = [
-    'https://nominatim.openstreetmap.org',
-    'https://nominatim.geocoding.ai'
-  ];
-
   for (const server of NOMINATIM_SERVERS) {
 
     try {
@@ -734,11 +748,6 @@ async function reverseGeocode(lat, lon) {
 
 async function geocode(address) {
 
-  const NOMINATIM_SERVERS = [
-    'https://nominatim.openstreetmap.org',
-    'https://nominatim.geocoding.ai'
-  ];
-
   for (const server of NOMINATIM_SERVERS) {
 
     try {
@@ -749,8 +758,10 @@ async function geocode(address) {
 
       const text = await response.text();
 
-      if (!text.startsWith('[')) {
-        throw new Error('Non-JSON response');
+      const first = text.trim()[0];
+      
+      if (first !== '[' && first !== '{') {
+        throw new Error('Invalid JSON response');
       }
 
       const data = JSON.parse(text);
@@ -955,11 +966,6 @@ async function fetchPOI(center, radius, keys) {
 async function fetchPOI(center, radius, keys) {
 
   const query = buildQuery(center, radius, keys);
-  const OVERPASS_SERVERS = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://lz4.overpass-api.de/api/interpreter'
-  ];
 
   for (const server of OVERPASS_SERVERS) {
 
