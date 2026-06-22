@@ -595,3 +595,27 @@ button:active,
 
   opacity:.65;
 }
+
+/* Popup */
+
+.popup-card{
+  min-width:220px;
+}
+
+.popup-title{
+  font-size:15px;
+  font-weight:700;
+  margin-bottom:8px;
+  color:#111827;
+}
+
+.popup-line{
+  margin-top:6px;
+  font-size:13px;
+  line-height:1.4;
+}
+
+.popup-line a{
+  color:#8b5cf6;
+  text-decoration:none;
+}
