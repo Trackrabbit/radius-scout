@@ -1,5 +1,11 @@
 // =========================
-// CONFIG
+// GLOBALS
+// =========================
+
+let searchInProgress = false;
+
+// =========================
+// POI CONFIG
 // =========================
 
 const POI_CONFIG = {
@@ -241,7 +247,7 @@ const POI_CONFIG = {
 };
 
 // =========================
-// PRESETS
+// POI PRESETS
 // =========================
 
 const POI_PRESETS = {
@@ -418,6 +424,7 @@ let matchedAddressBackup = '';
 const POI_STATE = {};
 
 // initialize state from config defaults
+
 Object.keys(POI_CONFIG).forEach(key => {
   POI_STATE[key] = POI_CONFIG[key].default || false;
 });
@@ -435,7 +442,6 @@ poiContainer.innerHTML = '';
 summaryGrid.innerHTML = '';
 
 const grouped = groupPOIs();
-
 
 // Track summary cards so we can still update counts
 
@@ -689,6 +695,8 @@ function updateURLState(center, radius) {
 
 function showLoading(show){
 
+  document.getElementById('searchBtn').disabled = show;
+
   const matched =
     document.getElementById('matchedAddress');
 
@@ -912,54 +920,12 @@ function buildQuery(center, radius, keys){
   });
 
   return `
-[out:json][timeout:25];
-(
-  ${queryParts.join('\n')}
-);
-out center;
-`;
-
-}
-
-async function fetchPOI(center, radius, keys) {
-
-  const query = buildQuery(center, radius, keys);
-
-  for (const server of OVERPASS_SERVERS) {
-
-    try {
-
-      const response = await fetch(server, {
-        method: 'POST',
-        body: query
-      });
-
-      const text = await response.text();
-
-      // Sometimes Overpass returns XML or HTML instead of JSON
-      if (!text.startsWith('{')) {
-        throw new Error('Non-JSON response');
-      }
-
-      const data = JSON.parse(text);
-
-      return data.elements || [];
-
-    }
-    catch (err) {
-
-      console.warn(
-        `Overpass server failed: ${server}`,
-        err
-      );
-
-    }
-
-  }
-
-  throw new Error(
-    'Map data services are busy. Please try again in a few moments.'
-  );
+    [out:json][timeout:25];
+    (
+      ${queryParts.join('\n')}
+    );
+    out center;
+    `;
 
 }
 
@@ -1073,6 +1039,12 @@ function toggleFilter(key){
 document
   .getElementById('searchBtn')
   .onclick = async ()=>{
+
+  if (searchInProgress) {
+    return;
+  }
+
+  searchInProgress = true;
 
   try{
 
@@ -1247,6 +1219,8 @@ document
   } finally {
 
     showLoading(false);
+
+    searchInProgress = false;
 
   }
 
