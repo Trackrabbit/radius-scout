@@ -46,8 +46,8 @@ async function handleSearch() {
     }
 
     map.setView([center.lat, center.lon], 15);
-    drawRadius(center, radius);
     clearMapData(); // Prep map for new data
+    drawRadius(center, radius);
 
     const results = await fetchPOI(center, radius, selectedKeys);
     
