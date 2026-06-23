@@ -162,6 +162,19 @@ function buildPopup(item, type, center) {
   const cuisine = tags.cuisine ? `🍔 ${tags.cuisine.replace(/;/g, ', ')}` : '';
   const wheelchair = tags.wheelchair === 'yes' ? `♿ Accessible` : (tags.wheelchair === 'no' ? `🚫 Not Accessible` : '');
   const wifi = tags.internet_access === 'wlan' || tags.internet_access === 'yes' ? `📶 WiFi Available` : '';
+
+  const extraBadges = [];
+  
+  if (tags.takeaway === 'yes') extraBadges.push('🥡 Takeaway');
+  if (tags.outdoor_seating === 'yes') extraBadges.push('☀️ Patio');
+  if (tags.toilets === 'yes' || tags.toilets === 'customers') extraBadges.push('🚻 Restrooms');
+  if (tags.parking === 'surface' || tags.parking === 'multi-storey') extraBadges.push('🅿️ Parking');
+
+  const badgesHTML = extraBadges.length 
+    ? `<div class="popup-line" style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+        ${extraBadges.map(b => `<span style="font-size: 11px; background: #1f2937; padding: 2px 6px; border-radius: 4px;">${b}</span>`).join('')}
+       </div>`
+    : '';
   
   return `
     <div class="popup-card">
