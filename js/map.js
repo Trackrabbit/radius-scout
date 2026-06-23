@@ -88,7 +88,17 @@ export function renderMarkers(results, center, selectedKeys) {
       })
     });
 
-    marker.bindPopup(buildPopup(item, type, center));
+    // Bind the pop-up, but disables the default click toggle behavior
+    marker.bindPopup(buildPopup(item, type, center), {
+      closeButton: false,
+      offset: [0, -10]
+    });
+
+    // Open on hover
+    marker.on('mouseover', function (e) {
+      this.openPopup();
+    });
+
     markersByType[type].push(marker);
     markerLayer.addLayer(marker);
   });
@@ -118,13 +128,38 @@ function buildPopup(item, type, center) {
   const tags = item.tags || {};
   const distance = distanceMiles(center.lat, center.lon, item.lat || item.center?.lat, item.lon || item.center?.lon).toFixed(2);
   
+  // Extract richer OSM Data
+  const name = tags.name || tags.brand || POI_CONFIG[type].label;
+  const address = `${tags['addr:housenumber'] || ''} ${tags['addr:street'] || ''}`.trim();
+  const hours = tags.opening_hours ? `🕒 ${tags.opening_hours.replace(/;/g, ', ')}` : '';
+  const cuisine = tags.cuisine ? `🍔 ${tags.cuisine.replace(/;/g, ', ')}` : '';
+  const wheelchair = tags.wheelchair === 'yes' ? `♿ Accessible` : (tags.wheelchair === 'no' ? `🚫 Not Accessible` : '');
+  const wifi = tags.internet_access === 'wlan' || tags.internet_access === 'yes' ? `📶 WiFi Available` : '';
+  
   return `
     <div class="popup-card">
-      <div class="popup-title">${POI_CONFIG[type].icon} ${tags.name || POI_CONFIG[type].label}</div>
-      ${tags['addr:housenumber'] || tags['addr:street'] ? `<div class="popup-line">📍 ${tags['addr:housenumber'] || ''} ${tags['addr:street'] || ''}</div>` : ''}
+      <div class="popup-title">${POI_CONFIG[type].icon} ${name}</div>
+      
+      ${address ? `<div class="popup-line">📍 ${address}</div>` : ''}
+      ${hours ? `<div class="popup-line">${hours}</div>` : ''}
+      ${cuisine ? `<div class="popup-line" style="text-transform: capitalize;">${cuisine}</div>` : ''}
+      
       ${tags.phone ? `<div class="popup-line">📞 ${tags.phone}</div>` : ''}
-      ${tags.website ? `<div class="popup-line">🌐 <a href="${tags.website}" target="_blank">Website</a></div>` : ''}
-      <div class="popup-line">📏 ${distance} mi away</div>
+      
+      ${tags.website ? `
+        <div class="popup-line">
+          🌐 <a href="${tags.website}" target="_blank" rel="noopener noreferrer">Website</a>
+        </div>
+      ` : ''}
+      
+      <div class="popup-line" style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+        ${wheelchair ? `<span style="font-size: 11px; background: #1f2937; padding: 2px 6px; border-radius: 4px;">${wheelchair}</span>` : ''}
+        ${wifi ? `<span style="font-size: 11px; background: #1f2937; padding: 2px 6px; border-radius: 4px;">${wifi}</span>` : ''}
+      </div>
+
+      <div class="popup-line" style="margin-top: 8px; color: #8b5cf6; font-weight: 600;">
+        📏 ${distance} mi away
+      </div>
     </div>
   `;
 }
