@@ -7,6 +7,8 @@ export const map = L.map('map');
 export let markerLayer = L.layerGroup().addTo(map);
 export let radiusCircle = null;
 export let markersByType = {};
+// Add this near the top of map.js with your other let/const declarations
+let popupTimeout;
 
 // Initialize base layer
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -15,6 +17,23 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
 
 export function initMap() {
   resetMapView();
+
+  // Watch for pop-ups
+  map.on('popupopen', (e) => {
+    const popupNode = e.popup._container;
+    
+    // If the mouse enters the pop-up card, cancel the closing timer
+    popupNode.addEventListener('mouseenter', () => {
+      clearTimeout(popupTimeout);
+    });
+    
+    // If the mouse leaves the pop-up card, start a 5-second countdown
+    popupNode.addEventListener('mouseleave', () => {
+      popupTimeout = setTimeout(() => {
+        map.closePopup(e.popup);
+      }, 2000);
+    });
+  });
 }
 
 export function resetMapView() {
@@ -94,9 +113,17 @@ export function renderMarkers(results, center, selectedKeys) {
       offset: [0, -10]
     });
 
-    // Open on hover
+    // Open on hover and clear any active closing timers
     marker.on('mouseover', function (e) {
+      clearTimeout(popupTimeout);
       this.openPopup();
+    });
+
+    // Start the countdown when the mouse leaves the map marker
+    marker.on('mouseout', function (e) {
+      popupTimeout = setTimeout(() => {
+        this.closePopup();
+      }, 5000);
     });
 
     markersByType[type].push(marker);
