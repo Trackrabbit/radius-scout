@@ -49,15 +49,43 @@ export async function searchAddresses(query) {
   return await response.json();
 }
 
+// Your original query builder, restored!
+export function buildQuery(center, radius, keys) {
+  let queryParts = [];
+  keys.forEach(key => {
+    const poi = POI_CONFIG[key];
+    poi.filters.forEach(([tag, val]) => {
+      if (val === '*') {
+        queryParts.push(`nwr["${tag}"](around:${radius},${center.lat},${center.lon});`);
+      } else {
+        queryParts.push(`nwr["${tag}"="${val}"](around:${radius},${center.lat},${center.lon});`);
+      }
+    });
+  });
+  return `[out:json][timeout:25];\n(\n${queryParts.join('\n')}\n);\nout center;`;
+}
+
+// The new proxy-enabled fetch function
 export async function fetchPOI(center, radius, keys) {
   const types = keys.join(',');
-  const url = `${PROXY_URL}/?lat=${center.lat}&lon=${center.lon}&radius=${radius}&types=${types}`;
+  const overpassQuery = buildQuery(center, radius, keys);
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        lat: center.lat,
+        lon: center.lon,
+        radius: radius,
+        types: types,
+        overpassQuery: overpassQuery
+      })
+    });
     
     if (!response.ok) {
-      // Extract the actual error message from the proxy!
       const errorPayload = await response.json();
       throw new Error(`Proxy Backend Failed: ${errorPayload.error}`);
     }
