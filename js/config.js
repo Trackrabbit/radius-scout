@@ -51,12 +51,6 @@ export const NOMINATIM_SERVERS = [
   'https://nominatim.geocoding.ai'
 ];
 
-export const OVERPASS_SERVERS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-  'https://lz4.overpass-api.de/api/interpreter'
-];
-
 // GLOBAL STATE
 export const POI_STATE = {};
 
