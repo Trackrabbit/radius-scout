@@ -1,7 +1,10 @@
 // =========================
 // js/api.js
 // =========================
-import { NOMINATIM_SERVERS, OVERPASS_SERVERS, POI_CONFIG } from './config.js';
+import { NOMINATIM_SERVERS, POI_CONFIG } from './config.js';
+
+// The URL of your new Cloudflare Worker Proxy
+export const PROXY_URL = 'https://radius-scout-proxy.ajamespage.workers.dev';
 
 export async function reverseGeocode(lat, lon) {
   for (const server of NOMINATIM_SERVERS) {
@@ -46,34 +49,23 @@ export async function searchAddresses(query) {
   return await response.json();
 }
 
-export function buildQuery(center, radius, keys) {
-  let queryParts = [];
-  keys.forEach(key => {
-    const poi = POI_CONFIG[key];
-    poi.filters.forEach(([tag, val]) => {
-      if (val === '*') {
-        queryParts.push(`nwr["${tag}"](around:${radius},${center.lat},${center.lon});`);
-      } else {
-        queryParts.push(`nwr["${tag}"="${val}"](around:${radius},${center.lat},${center.lon});`);
-      }
-    });
-  });
-  return `[out:json][timeout:25];\n(\n${queryParts.join('\n')}\n);\nout center;`;
-}
-
+// The new simplified fetch function pointing to your proxy
 export async function fetchPOI(center, radius, keys) {
-  const query = buildQuery(center, radius, keys);
-  
-  for (const server of OVERPASS_SERVERS) {
-    try {
-      const response = await fetch(server, { method: 'POST', body: query });
-      const text = await response.text();
-      if (!text.startsWith('{')) throw new Error('Non-JSON response');
-      const data = JSON.parse(text);
-      return data.elements || [];
-    } catch (err) {
-      console.warn(`Overpass server failed: ${server}`, err);
+  const types = keys.join(',');
+  const url = `${PROXY_URL}/?lat=${center.lat}&lon=${center.lon}&radius=${radius}&types=${types}`;
+
+  try {
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Proxy error: ${response.status}`);
     }
+    
+    const data = await response.json();
+    return data.elements || [];
+    
+  } catch (err) {
+    console.error("Fetch POI Error:", err);
+    throw new Error('Unable to load map data from the proxy server.');
   }
-  throw new Error('Map data services are busy. Please try again in a few moments.');
 }
