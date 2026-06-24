@@ -49,7 +49,6 @@ export async function searchAddresses(query) {
   return await response.json();
 }
 
-// The new simplified fetch function pointing to your proxy
 export async function fetchPOI(center, radius, keys) {
   const types = keys.join(',');
   const url = `${PROXY_URL}/?lat=${center.lat}&lon=${center.lon}&radius=${radius}&types=${types}`;
@@ -58,7 +57,9 @@ export async function fetchPOI(center, radius, keys) {
     const response = await fetch(url);
     
     if (!response.ok) {
-      throw new Error(`Proxy error: ${response.status}`);
+      // Extract the actual error message from the proxy!
+      const errorPayload = await response.json();
+      throw new Error(`Proxy Backend Failed: ${errorPayload.error}`);
     }
     
     const data = await response.json();
@@ -66,6 +67,6 @@ export async function fetchPOI(center, radius, keys) {
     
   } catch (err) {
     console.error("Fetch POI Error:", err);
-    throw new Error('Unable to load map data from the proxy server.');
+    throw err;
   }
 }
