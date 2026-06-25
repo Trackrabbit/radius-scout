@@ -123,7 +123,7 @@ export function renderMarkers(results, center, selectedKeys) {
     marker.on('mouseout', function (e) {
       popupTimeout = setTimeout(() => {
         this.closePopup();
-      }, 5000);
+      }, 1500);
     });
 
     markersByType[type].push(marker);
