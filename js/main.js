@@ -10,6 +10,47 @@ import { map, initMap, clearMapData, drawRadius, renderMarkers, applyFilter, res
 let searchInProgress = false;
 let selectedLocation = null;
 
+// REAL ESTATE
+
+// Add this near your other top-level variables
+let lastSuccessfulSearch = null;
+
+// Find your logo element (assuming it has an ID like 'brand-logo' or 'app-title')
+const hiddenTrigger = document.getElementById('brand-logo'); 
+
+if (hiddenTrigger) {
+  // Make the cursor look like a normal pointer so it stays a secret
+  hiddenTrigger.style.cursor = 'default'; 
+  
+  hiddenTrigger.addEventListener('click', async () => {
+    if (!lastSuccessfulSearch) {
+      console.warn("Run a standard search first to establish a center point.");
+      return;
+    }
+
+    console.log("🤫 Secret Real Estate Mode Activated!");
+    
+    try {
+      // Show loading state here if you have a spinner
+      
+      // We pass our secret 'real_estate' key to the proxy
+      const realEstateData = await fetchPOI(
+        lastSuccessfulSearch.center, 
+        lastSuccessfulSearch.radius, 
+        ['real_estate'] // This tells your Cloudflare Worker to hit RapidAPI
+      );
+      
+      console.log("Real Estate Data retrieved:", realEstateData);
+      
+      // NEXT STEP: We will need a new map function to render these specific markers
+      // renderRealEstateMarkers(realEstateData);
+
+    } catch (error) {
+      console.error("Real Estate Fetch Failed:", error);
+    }
+  });
+}
+
 // =========================
 // CORE ACTIONS
 // =========================
@@ -55,6 +96,12 @@ async function handleSearch() {
     const counts = renderMarkers(results, center, selectedKeys);
     updateSummaryCounts(counts);
     updateURLState(center, radius);
+
+    // Save state for the super secret Real Estate mode
+    lastSuccessfulSearch = {
+      center: center,
+      radius: radius 
+    };
 
     // Mobile UX Scroll
     if (window.innerWidth <= 768) {
