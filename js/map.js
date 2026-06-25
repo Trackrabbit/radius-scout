@@ -19,6 +19,9 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
 export function initMap() {
   resetMapView();
 
+  // Initialize the real estate layer immediately when the map loads!
+  realEstateLayer = L.layerGroup().addTo(map);
+
   // Watch for pop-ups
   map.on('popupopen', (e) => {
     const popupNode = e.popup._container;
@@ -27,10 +30,8 @@ export function initMap() {
     popupNode.addEventListener('mouseenter', () => {
       clearTimeout(popupTimeout);
     });
-
-    realEstateLayer = L.layerGroup().addTo(map);
     
-    // If the mouse leaves the pop-up card, start a 5-second countdown
+    // If the mouse leaves the pop-up card, start a 1.5-second countdown
     popupNode.addEventListener('mouseleave', () => {
       popupTimeout = setTimeout(() => {
         map.closePopup(e.popup);
