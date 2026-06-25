@@ -65,7 +65,6 @@ export function buildQuery(center, radius, keys) {
   return `[out:json][timeout:25];\n(\n${queryParts.join('\n')}\n);\nout center;`;
 }
 
-// Proxy-enabled fetch function
 export async function fetchPOI(center, radius, keys) {
   const types = keys.join(',');
   
@@ -85,18 +84,28 @@ export async function fetchPOI(center, radius, keys) {
         lon: center.lon,
         radius: radius,
         types: types,
-        overpassQuery: overpassQuery 
+        overpassQuery: overpassQuery
       })
     });
     
-    if (!response.ok) {
-      const errorPayload = await response.json();
-      throw new Error(`Proxy Backend Failed: ${errorPayload.error}`);
+    // 1. Grab the raw text response BEFORE trying to parse it
+    const rawText = await response.text();
+    
+    // 2. The HTML Trap: Try to parse JSON safely
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseError) {
+      console.error("🚨 HTML PAYLOAD RECEIVED:", rawText);
+      throw new Error(`Proxy returned an HTML webpage instead of JSON (Status ${response.status}). Check the console for the full page text.`);
     }
     
-    const data = await response.json();
+    // 3. Handle standard proxy errors
+    if (!response.ok) {
+      throw new Error(`Proxy Backend Failed: ${data.error}`);
+    }
     
-    // ROUTING: Hand back the raw Zillow payload, OR the standard OSM elements
+    // 4. ROUTING: Hand back the raw Zillow payload, OR the standard OSM elements
     if (types === 'real_estate') {
       return data; 
     }
