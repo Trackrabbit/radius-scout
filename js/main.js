@@ -5,6 +5,7 @@ import { POI_STATE, POI_CONFIG, selectedPOI } from './config.js';
 import { initUI, showLoading, setMatchedAddress, updateSummaryCounts, resetUI } from './ui.js';
 import { geocode, reverseGeocode, searchAddresses, fetchPOI } from './api.js';
 import { map, initMap, clearMapData, drawRadius, renderMarkers, applyFilter, resetMapView } from './map.js';
+import { map, initMap, clearMapData, drawRadius, renderMarkers, applyFilter, resetMapView, renderRealEstateMarkers } from './map.js';
 
 // APP STATE
 let searchInProgress = false;
@@ -35,6 +36,12 @@ if (hiddenTrigger) {
       );
       
       console.log("Real Estate Data retrieved:", realEstateData);
+
+     // Hand the array of properties directly to the new map renderer
+     if (realEstateData && realEstateData.results) {
+       renderRealEstateMarkers(realEstateData.results);
+     }
+      
 
     } catch (error) {
       console.error("Real Estate Fetch Failed:", error);
