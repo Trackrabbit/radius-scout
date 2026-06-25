@@ -46,6 +46,10 @@ if (hiddenTrigger) {
 // CORE ACTIONS
 // =========================
 
+document.getElementById('addressInput').addEventListener('input', () => {
+  selectedLocation = null;
+});
+
 async function handleSearch() {
   if (searchInProgress) return;
   
@@ -146,11 +150,11 @@ async function handleLocation() {
 
 function handleClear() {
   selectedLocation = null;
+  lastSuccessfulSearch = null; 
   clearMapData();
   resetUI();
   resetMapView();
   
-  // Clear URL params
   history.replaceState({}, '', window.location.pathname);
 }
 
