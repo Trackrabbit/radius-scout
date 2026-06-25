@@ -6,21 +6,17 @@ import { initUI, showLoading, setMatchedAddress, updateSummaryCounts, resetUI } 
 import { geocode, reverseGeocode, searchAddresses, fetchPOI } from './api.js';
 import { map, initMap, clearMapData, drawRadius, renderMarkers, applyFilter, resetMapView } from './map.js';
 
-// App State
+// APP STATE
 let searchInProgress = false;
 let selectedLocation = null;
 
 // REAL ESTATE
-
-// Add this near your other top-level variables
 let lastSuccessfulSearch = null;
 
-// Find your logo element (assuming it has an ID like 'brand-logo' or 'app-title')
-const hiddenTrigger = document.getElementById('brand-logo'); 
+const hiddenTrigger = document.querySelector('.brand'); 
 
 if (hiddenTrigger) {
-  // Make the cursor look like a normal pointer so it stays a secret
-  hiddenTrigger.style.cursor = 'default'; 
+  // Don't change the cursor to a pointer so it remains a secret!
   
   hiddenTrigger.addEventListener('click', async () => {
     if (!lastSuccessfulSearch) {
@@ -31,19 +27,14 @@ if (hiddenTrigger) {
     console.log("🤫 Secret Real Estate Mode Activated!");
     
     try {
-      // Show loading state here if you have a spinner
-      
-      // We pass our secret 'real_estate' key to the proxy
+      // Pass our super secret 'real_estate' key to the proxy
       const realEstateData = await fetchPOI(
         lastSuccessfulSearch.center, 
         lastSuccessfulSearch.radius, 
-        ['real_estate'] // This tells your Cloudflare Worker to hit RapidAPI
+        ['real_estate'] 
       );
       
       console.log("Real Estate Data retrieved:", realEstateData);
-      
-      // NEXT STEP: We will need a new map function to render these specific markers
-      // renderRealEstateMarkers(realEstateData);
 
     } catch (error) {
       console.error("Real Estate Fetch Failed:", error);
