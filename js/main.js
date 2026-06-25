@@ -4,7 +4,6 @@
 import { POI_STATE, POI_CONFIG, selectedPOI } from './config.js';
 import { initUI, showLoading, setMatchedAddress, updateSummaryCounts, resetUI } from './ui.js';
 import { geocode, reverseGeocode, searchAddresses, fetchPOI } from './api.js';
-import { map, initMap, clearMapData, drawRadius, renderMarkers, applyFilter, resetMapView } from './map.js';
 import { map, initMap, clearMapData, drawRadius, renderMarkers, applyFilter, resetMapView, renderRealEstateMarkers } from './map.js';
 
 // APP STATE
