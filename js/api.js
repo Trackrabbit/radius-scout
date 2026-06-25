@@ -49,7 +49,7 @@ export async function searchAddresses(query) {
   return await response.json();
 }
 
-// Your original query builder, restored!
+//
 export function buildQuery(center, radius, keys) {
   let queryParts = [];
   keys.forEach(key => {
@@ -65,10 +65,14 @@ export function buildQuery(center, radius, keys) {
   return `[out:json][timeout:25];\n(\n${queryParts.join('\n')}\n);\nout center;`;
 }
 
-// The new proxy-enabled fetch function
+// Proxy-enabled fetch function
 export async function fetchPOI(center, radius, keys) {
   const types = keys.join(',');
-  const overpassQuery = buildQuery(center, radius, keys);
+  
+  // BYPASS: We only build an Overpass query if this is a standard search
+  const overpassQuery = types === 'real_estate' 
+    ? null 
+    : buildQuery(center, radius, keys);
 
   try {
     const response = await fetch(PROXY_URL, {
@@ -81,7 +85,7 @@ export async function fetchPOI(center, radius, keys) {
         lon: center.lon,
         radius: radius,
         types: types,
-        overpassQuery: overpassQuery
+        overpassQuery: overpassQuery 
       })
     });
     
@@ -91,6 +95,12 @@ export async function fetchPOI(center, radius, keys) {
     }
     
     const data = await response.json();
+    
+    // ROUTING: Hand back the raw Zillow payload, OR the standard OSM elements
+    if (types === 'real_estate') {
+      return data; 
+    }
+    
     return data.elements || [];
     
   } catch (err) {
