@@ -7,7 +7,8 @@ export const map = L.map('map');
 export let markerLayer = L.layerGroup().addTo(map);
 export let radiusCircle = null;
 export let markersByType = {};
-// Add this near the top of map.js with your other let/const declarations
+export let realEstateLayer;
+
 let popupTimeout;
 
 // Initialize base layer
@@ -26,12 +27,14 @@ export function initMap() {
     popupNode.addEventListener('mouseenter', () => {
       clearTimeout(popupTimeout);
     });
+
+    realEstateLayer = L.layerGroup().addTo(map);
     
     // If the mouse leaves the pop-up card, start a 5-second countdown
     popupNode.addEventListener('mouseleave', () => {
       popupTimeout = setTimeout(() => {
         map.closePopup(e.popup);
-      }, 2000);
+      }, 1500);
     });
   });
 }
@@ -62,6 +65,7 @@ export function drawRadius(center, radius) {
 export function clearMapData() {
   markerLayer.clearLayers();
   markersByType = {};
+  if (realEstateLayer) realEstateLayer.clearLayers();
   if (radiusCircle) {
     map.removeLayer(radiusCircle);
     radiusCircle = null;
@@ -202,4 +206,53 @@ function buildPopup(item, type, center) {
       </div>
     </div>
   `;
+}
+
+// =========================
+// REAL ESTATE RENDERER
+// =========================
+export function renderRealEstateMarkers(properties) {
+  // Clear any old real estate markers
+  if (realEstateLayer) realEstateLayer.clearLayers();
+
+  // Create a custom CSS icon using Leaflet's divIcon (No external images needed!)
+  const houseIcon = L.divIcon({
+    className: 'custom-real-estate-icon',
+    html: `
+      <div style="background-color: #10b981; width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 3px 6px rgba(0,0,0,0.3);">
+        🏠
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16]
+  });
+
+  properties.forEach(prop => {
+    // We use the latitude and longitude provided by our mock data
+    const marker = L.marker([prop.lat, prop.lon], { icon: houseIcon });
+
+    // Build the rich property card popup
+    const popupContent = `
+      <div style="font-family: system-ui, sans-serif; min-width: 220px; padding: 5px;">
+        <h2 style="margin: 0 0 4px 0; color: #10b981; font-size: 22px;">${prop.price}</h2>
+        <p style="margin: 0 0 12px 0; font-size: 14px; color: #6b7280; font-weight: 500;">${prop.address}</p>
+        
+        <div style="display: flex; justify-content: space-between; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; padding: 8px 0; margin-bottom: 12px; font-size: 14px; color: #374151;">
+          <div style="text-align: center;"><b>${prop.beds}</b><br><span style="font-size:11px; color:#9ca3af;">Beds</span></div>
+          <div style="text-align: center;"><b>${prop.baths}</b><br><span style="font-size:11px; color:#9ca3af;">Baths</span></div>
+          <div style="text-align: center;"><b>${prop.sqft}</b><br><span style="font-size:11px; color:#9ca3af;">SqFt</span></div>
+        </div>
+        
+        <div style="text-align: center;">
+          <span style="background-color: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
+            ${prop.status}
+          </span>
+        </div>
+      </div>
+    `;
+
+    marker.bindPopup(popupContent);
+    realEstateLayer.addLayer(marker);
+  });
 }
