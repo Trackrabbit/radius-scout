@@ -6,6 +6,7 @@ import { POI_CONFIG } from './config.js';
 export const map = L.map('map');
 export let markerLayer = L.layerGroup().addTo(map);
 export let radiusCircle = null;
+export let centerMarker = null;
 export let markersByType = {};
 export let realEstateLayer;
 
@@ -53,13 +54,30 @@ export function resetMapView() {
 
 export function drawRadius(center, radius) {
   if (radiusCircle) map.removeLayer(radiusCircle);
+  if (centerMarker) map.removeLayer(centerMarker); 
   
+  // Draw the circle
   radiusCircle = L.circle([center.lat, center.lon], {
     radius,
     color: '#8b5cf6',
     fillOpacity: 0.12,
     weight: 2,
     dashArray: '4'
+  }).addTo(map);
+
+  // Draw the center anchor
+  const centerIcon = L.divIcon({
+    className: 'center-anchor-icon',
+    html: `
+      <div style="background-color: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.4);"></div>
+    `,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7] // Centers the dot perfectly on the exact coordinates
+  });
+
+  centerMarker = L.marker([center.lat, center.lon], {
+    icon: centerIcon,
+    zIndexOffset: 1000 // Forces the center dot to sit above all other markers
   }).addTo(map);
 }
 
@@ -70,6 +88,10 @@ export function clearMapData() {
   if (radiusCircle) {
     map.removeLayer(radiusCircle);
     radiusCircle = null;
+  }
+  if (centerMarker) {
+    map.removeLayer(centerMarker);
+    centerMarker = null;
   }
   map.closePopup();
 }
