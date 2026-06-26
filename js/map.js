@@ -235,10 +235,8 @@ function buildPopup(item, type, center) {
 // REAL ESTATE RENDERER
 // =========================
 export function renderRealEstateMarkers(properties) {
-  // Clear any old real estate markers
   if (realEstateLayer) realEstateLayer.clearLayers();
 
-  // Create a custom CSS icon using Leaflet's divIcon (No external images needed!)
   const houseIcon = L.divIcon({
     className: 'custom-real-estate-icon',
     html: `
@@ -252,24 +250,48 @@ export function renderRealEstateMarkers(properties) {
   });
 
   properties.forEach(prop => {
-    // We use the latitude and longitude provided by our mock data
-    const marker = L.marker([prop.lat, prop.lon], { icon: houseIcon });
+    // 1. Extract live coordinates from the nested location block
+    const lat = prop.location?.address?.coordinate?.lat;
+    const lon = prop.location?.address?.coordinate?.lon;
+    
+    // Skip plotting if coordinate entries are missing or malformed
+    if (!lat || !lon) return;
 
-    // Build the rich property card popup
+    // 2. Normalize and format raw data fields
+    const rawPrice = prop.list_price || 0;
+    const formattedPrice = rawPrice > 0 
+      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(rawPrice)
+      : 'Contact Agent';
+
+    const streetAddress = prop.location?.address?.line || 'Address Undisclosed';
+    const beds = prop.description?.beds || '--';
+    const baths = prop.description?.baths || '--';
+    const sqft = prop.description?.sqft 
+      ? new Intl.NumberFormat('en-US').format(prop.description.sqft) 
+      : '--';
+    
+    // Normalize status strings (e.g., "for_sale" -> "For Sale")
+    const cleanStatus = prop.status 
+      ? prop.status.replace('_', ' ') 
+      : 'Active';
+
+    // 3. Build Marker and Popup
+    const marker = L.marker([lat, lon], { icon: houseIcon });
+
     const popupContent = `
       <div style="font-family: system-ui, sans-serif; min-width: 220px; padding: 5px;">
-        <h2 style="margin: 0 0 4px 0; color: #10b981; font-size: 22px;">${prop.price}</h2>
-        <p style="margin: 0 0 12px 0; font-size: 14px; color: #6b7280; font-weight: 500;">${prop.address}</p>
+        <h2 style="margin: 0 0 4px 0; color: #10b981; font-size: 22px;">${formattedPrice}</h2>
+        <p style="margin: 0 0 12px 0; font-size: 14px; color: #6b7280; font-weight: 500; text-transform: capitalize;">${streetAddress.toLowerCase()}</p>
         
         <div style="display: flex; justify-content: space-between; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; padding: 8px 0; margin-bottom: 12px; font-size: 14px; color: #374151;">
-          <div style="text-align: center;"><b>${prop.beds}</b><br><span style="font-size:11px; color:#9ca3af;">Beds</span></div>
-          <div style="text-align: center;"><b>${prop.baths}</b><br><span style="font-size:11px; color:#9ca3af;">Baths</span></div>
-          <div style="text-align: center;"><b>${prop.sqft}</b><br><span style="font-size:11px; color:#9ca3af;">SqFt</span></div>
+          <div style="text-align: center;"><b>${beds}</b><br><span style="font-size:11px; color:#9ca3af;">Beds</span></div>
+          <div style="text-align: center;"><b>${baths}</b><br><span style="font-size:11px; color:#9ca3af;">Baths</span></div>
+          <div style="text-align: center;"><b>${sqft}</b><br><span style="font-size:11px; color:#9ca3af;">SqFt</span></div>
         </div>
         
         <div style="text-align: center;">
           <span style="background-color: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
-            ${prop.status}
+            ${cleanStatus}
           </span>
         </div>
       </div>
