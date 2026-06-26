@@ -619,3 +619,35 @@ button:active,
   color:#8b5cf6;
   text-decoration:none;
 }
+
+/* =========================
+   COLLAPSIBLE SUMMARY
+   ========================= */
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 10px;
+  user-select: none;
+}
+
+.summary-header:hover h3 {
+  color: #10b981 !important;
+}
+
+.summary-content {
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out, margin 0.3s ease-in-out;
+  max-height: 400px; /* Adjust this if controls are taller than 400px */
+  opacity: 1;
+}
+
+.summary-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+  pointer-events: none; /* Prevents clicking hidden buttons */
+}
