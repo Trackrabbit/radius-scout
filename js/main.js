@@ -15,6 +15,27 @@ let lastSuccessfulSearch = null;
 
 const hiddenTrigger = document.querySelector('.brand'); 
 
+// =========================
+// SIDEBAR UI TOGGLES
+// =========================
+const summaryToggle = document.getElementById('summary-toggle');
+const summaryContent = document.getElementById('summary-content');
+const summaryChevron = document.getElementById('summary-chevron');
+
+if (summaryToggle && summaryContent) {
+  summaryToggle.addEventListener('click', () => {
+    // Toggle the collapsed class
+    summaryContent.classList.toggle('collapsed');
+    
+    // Rotate the chevron arrow
+    if (summaryContent.classList.contains('collapsed')) {
+      summaryChevron.style.transform = 'rotate(-90deg)'; // Points left when closed
+    } else {
+      summaryChevron.style.transform = 'rotate(0deg)';   // Points down when open
+    }
+  });
+}
+
 if (hiddenTrigger) {
   // Don't change the cursor to a pointer so it remains a secret!
   
@@ -41,11 +62,15 @@ if (hiddenTrigger) {
       
       if (propertyArray && propertyArray.length > 0) {
         renderRealEstateMarkers(propertyArray);
+        renderPropertyList(propertyArray);
+        
+        // Auto-collapse the search panel to reveal the list!
+        document.getElementById('summary-content').classList.add('collapsed');
+        document.getElementById('summary-chevron').style.transform = 'rotate(-90deg)';
       } else {
         console.warn("No properties found within this search boundary.");
       }
       
-
     } catch (error) {
       console.error("Real Estate Fetch Failed:", error);
     }
@@ -218,6 +243,79 @@ function loadURLState() {
     document.getElementById('addressInput').value = address;
     setMatchedAddress('Shared Location', address);
     handleSearch();
+  });
+}
+
+// =========================
+// SIDEBAR UI RENDERER
+// =========================
+
+function renderPropertyList(properties) {
+  const listContainer = document.getElementById('property-list');
+  if (!listContainer) return;
+  
+  // Wipe the list clean before adding new results
+  listContainer.innerHTML = ''; 
+  
+  // Add a quick result counter at the top
+  const header = document.createElement('div');
+  header.style.marginBottom = '10px';
+  header.style.fontSize = '14px';
+  header.style.fontWeight = '600';
+  header.style.color = '#6b7280';
+  header.innerText = `${properties.length} Properties Found`;
+  listContainer.appendChild(header);
+
+  // Loop through the data and build a card for each property
+  properties.forEach(prop => {
+    // Extract the exact same data we used for the map markers
+    const lat = prop.location?.address?.coordinate?.lat;
+    const lon = prop.location?.address?.coordinate?.lon;
+    if (!lat || !lon) return;
+
+    const rawPrice = prop.list_price || 0;
+    const formattedPrice = rawPrice > 0 
+      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(rawPrice)
+      : 'Contact Agent';
+
+    const streetAddress = prop.location?.address?.line || 'Address Undisclosed';
+    const beds = prop.description?.beds || '--';
+    const baths = prop.description?.baths || '--';
+    const sqft = prop.description?.sqft 
+      ? new Intl.NumberFormat('en-US').format(prop.description.sqft) 
+      : '--';
+    
+    const isRental = prop.status && prop.status.toLowerCase().includes('rent');
+    const cleanStatus = prop.status ? prop.status.replace('_', ' ') : 'Active';
+
+    // Create the card element
+    const card = document.createElement('div');
+    card.className = 'property-card';
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+        <h4 style="margin: 0; color: #10b981; font-size: 18px;">${formattedPrice}${isRental ? '<span style="font-size:12px; color:#6b7280;">/mo</span>' : ''}</h4>
+        <span style="background-color: ${isRental ? '#dbeafe' : '#d1fae5'}; color: ${isRental ? '#1e40af' : '#065f46'}; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; text-transform: uppercase;">${cleanStatus}</span>
+      </div>
+      <p style="margin: 0 0 10px 0; font-size: 13px; color: #4b5563; text-transform: capitalize;">${streetAddress.toLowerCase()}</p>
+      
+      <div style="display: flex; gap: 12px; font-size: 13px; color: #374151; border-top: 1px solid #f3f4f6; padding-top: 8px;">
+        <span><b>${beds}</b> bd</span>
+        <span style="color: #d1d5db;">|</span>
+        <span><b>${baths}</b> ba</span>
+        <span style="color: #d1d5db;">|</span>
+        <span><b>${sqft}</b> sqft</span>
+      </div>
+    `;
+
+    // INTERACTIVITY: When clicked, fly the map to this house!
+    card.addEventListener('click', () => {
+      map.flyTo([lat, lon], 17, {
+        animate: true,
+        duration: 1.5 
+      });
+    });
+
+    listContainer.appendChild(card);
   });
 }
 
