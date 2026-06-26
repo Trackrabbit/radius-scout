@@ -270,17 +270,20 @@ export function renderRealEstateMarkers(properties) {
       ? new Intl.NumberFormat('en-US').format(prop.description.sqft) 
       : '--';
     
-    // Normalize status strings (e.g., "for_sale" -> "For Sale")
-    const cleanStatus = prop.status 
-      ? prop.status.replace('_', ' ') 
-      : 'Active';
+    // Normalize status strings
+    const cleanStatus = prop.status ? prop.status.replace('_', ' ') : 'Active';
+    
+    // Check if it's a rental to swap the colors
+    const isRental = prop.status === 'for_rent';
+    const badgeBg = isRental ? '#dbeafe' : '#d1fae5'; // Blue for rent, Green for sale
+    const badgeText = isRental ? '#1e40af' : '#065f46';
 
     // 3. Build Marker and Popup
     const marker = L.marker([lat, lon], { icon: houseIcon });
 
     const popupContent = `
       <div style="font-family: system-ui, sans-serif; min-width: 220px; padding: 5px;">
-        <h2 style="margin: 0 0 4px 0; color: #10b981; font-size: 22px;">${formattedPrice}</h2>
+        <h2 style="margin: 0 0 4px 0; color: #10b981; font-size: 22px;">${formattedPrice}${isRental ? '/mo' : ''}</h2>
         <p style="margin: 0 0 12px 0; font-size: 14px; color: #6b7280; font-weight: 500; text-transform: capitalize;">${streetAddress.toLowerCase()}</p>
         
         <div style="display: flex; justify-content: space-between; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; padding: 8px 0; margin-bottom: 12px; font-size: 14px; color: #374151;">
@@ -290,7 +293,7 @@ export function renderRealEstateMarkers(properties) {
         </div>
         
         <div style="text-align: center;">
-          <span style="background-color: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
+          <span style="background-color: ${badgeBg}; color: ${badgeText}; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
             ${cleanStatus}
           </span>
         </div>
