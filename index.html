@@ -37,7 +37,7 @@
   </div>
 
   <div id="summary-toggle" class="summary-header">
-    <h3 style="margin: 0; font-size: 14px; color: #374151;">Search Parameters</h3>
+    <h3 style="margin: 0; font-size: 14px;">Search Parameters</h3>
     <span id="summary-chevron" style="transition: transform 0.3s ease;">▼</span>
   </div>
 
@@ -46,30 +46,15 @@
     <div class="search-group">
       <div class="search-input-row">
         <div class="autocomplete-wrapper">
-          <input
-            id="addressInput"
-            type="text"
-            placeholder="Enter address"
-            autocomplete="off"
-          >
-          <div
-            id="addressSuggestions"
-            class="suggestions"
-          ></div>
+          <input id="addressInput" type="text" placeholder="Enter address" autocomplete="off">
+          <div id="addressSuggestions" class="suggestions"></div>
         </div>
-        <button
-          id="locationBtn"
-          class="location-icon-btn"
-          title="Use My Location"
-          type="button"
-        >
-          📍
-        </button>
+        <button id="locationBtn" class="location-icon-btn" title="Use My Location" type="button">📍</button>
       </div>
 
       <select id="radiusSelect">
         <option value="152">500 ft</option>
-        <option value="305" >1000 ft</option>
+        <option value="305">1000 ft</option>
         <option value="805">1/2 mile</option>
         <option value="1609" selected>1 mile</option>
       </select>
@@ -84,21 +69,16 @@
     <div id="poiContainer"></div>
 
     <div class="button-row">
-      <button id="searchBtn" class="primary-btn">
-        Search Area
-      </button>
-      <button id="clearBtn" class="secondary-btn">
-        Clear
-      </button>
+      <button id="searchBtn" class="primary-btn">Search Area</button>
+      <button id="clearBtn" class="secondary-btn">Clear</button>
     </div>
 
-  </div> <div class="section-title summary-title">
-    Summary
-  </div>
+    <div class="section-title summary-title" style="margin-top: 15px;">
+      Summary
+    </div>
+    <div id="summaryGrid" class="summary-grid"></div>
 
-  <div id="summaryGrid" class="summary-grid"></div>
-
-  <div id="property-list" class="property-list"></div>
+  </div> <div id="property-list" class="property-list"></div>
 
   <div class="footer">
     <div class="footer-title">
