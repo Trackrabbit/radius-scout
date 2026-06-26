@@ -35,11 +35,15 @@ if (hiddenTrigger) {
       );
       
       console.log("Real Estate Data retrieved:", realEstateData);
-
-     // Hand the array of properties directly to the new map renderer
-     if (realEstateData && realEstateData.results) {
-       renderRealEstateMarkers(realEstateData.results);
-     }
+      
+      // Drill down into the custom wrapper structure returned by the new API
+      const propertyArray = realEstateData.data?.home_search?.results;
+      
+      if (propertyArray && propertyArray.length > 0) {
+        renderRealEstateMarkers(propertyArray);
+      } else {
+        console.warn("No properties found within this search boundary.");
+      }
       
 
     } catch (error) {
