@@ -237,27 +237,33 @@ function buildPopup(item, type, center) {
 export function renderRealEstateMarkers(properties) {
   if (realEstateLayer) realEstateLayer.clearLayers();
 
-  const houseIcon = L.divIcon({
+  // 1. Create the Green Icon (For Sale)
+  const saleIcon = L.divIcon({
     className: 'custom-real-estate-icon',
     html: `
       <div style="background-color: #10b981; width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 3px 6px rgba(0,0,0,0.3);">
         🏠
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16]
+    iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16]
+  });
+
+  // 2. Create the Blue Icon (For Rent)
+  const rentIcon = L.divIcon({
+    className: 'custom-real-estate-icon',
+    html: `
+      <div style="background-color: #3b82f6; width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 3px 6px rgba(0,0,0,0.3);">
+        🏠
+      </div>
+    `,
+    iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16]
   });
 
   properties.forEach(prop => {
-    // 1. Extract live coordinates from the nested location block
     const lat = prop.location?.address?.coordinate?.lat;
     const lon = prop.location?.address?.coordinate?.lon;
-    
-    // Skip plotting if coordinate entries are missing or malformed
     if (!lat || !lon) return;
 
-    // 2. Normalize and format raw data fields
     const rawPrice = prop.list_price || 0;
     const formattedPrice = rawPrice > 0 
       ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(rawPrice)
@@ -270,16 +276,16 @@ export function renderRealEstateMarkers(properties) {
       ? new Intl.NumberFormat('en-US').format(prop.description.sqft) 
       : '--';
     
-    // Normalize status strings
+    // Make the status check bulletproof against weird capitalizations
+    const isRental = prop.status && prop.status.toLowerCase().includes('rent');
     const cleanStatus = prop.status ? prop.status.replace('_', ' ') : 'Active';
     
-    // Check if it's a rental to swap the colors
-    const isRental = prop.status === 'for_rent';
-    const badgeBg = isRental ? '#dbeafe' : '#d1fae5'; // Blue for rent, Green for sale
+    const badgeBg = isRental ? '#dbeafe' : '#d1fae5'; 
     const badgeText = isRental ? '#1e40af' : '#065f46';
 
-    // 3. Build Marker and Popup
-    const marker = L.marker([lat, lon], { icon: houseIcon });
+    // 3. Assign the correct map pin icon!
+    const activeIcon = isRental ? rentIcon : saleIcon;
+    const marker = L.marker([lat, lon], { icon: activeIcon });
 
     const popupContent = `
       <div style="font-family: system-ui, sans-serif; min-width: 220px; padding: 5px;">
