@@ -634,14 +634,22 @@ button:active,
   user-select: none;
 }
 
-.summary-header:hover h3 {
+/* Force the text to be a light, readable gray by default */
+.summary-header h3, 
+.summary-header span {
+  color: #f3f4f6; 
+  transition: color 0.2s ease;
+}
+
+.summary-header:hover h3,
+.summary-header:hover span {
   color: #10b981 !important;
 }
 
 .summary-content {
   overflow: hidden;
-  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out, margin 0.3s ease-in-out;
-  max-height: 400px; /* Adjust this if controls are taller than 400px */
+  transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, margin 0.4s ease-in-out;
+  max-height: 1000px; /* INCREASED */
   opacity: 1;
 }
 
@@ -649,5 +657,5 @@ button:active,
   max-height: 0;
   opacity: 0;
   margin-bottom: 0;
-  pointer-events: none; /* Prevents clicking hidden buttons */
+  pointer-events: none;
 }
