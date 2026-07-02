@@ -187,18 +187,24 @@ function renderSuggestions(results, onSearch) {
   container.style.display = 'block';
 }
 
-export function showLoading(show) {
-  document.getElementById('searchBtn').disabled = show;
-  const matched = document.getElementById('matchedAddress');
-
-  if (show) {
-    matchedAddressBackup = matched.innerHTML;
-    matched.innerHTML = `
-      <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">Searching...</div>
-      <div>Finding nearby locations.</div>
-    `;
-  } else if (matchedAddressBackup) {
-    matched.innerHTML = matchedAddressBackup;
+export function showLoading(isLoading) {
+  const searchBtn = document.getElementById('searchBtn');
+  if (!searchBtn) return;
+  
+  if (isLoading) {
+    // Disable the button and change text
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = 'Searching... ⏳';
+    
+    // Visually mute the button so it looks inactive
+    searchBtn.style.opacity = '0.7';
+    searchBtn.style.cursor = 'not-allowed';
+  } else {
+    // Restore original state
+    searchBtn.disabled = false;
+    searchBtn.innerHTML = 'Search Area';
+    searchBtn.style.opacity = '1';
+    searchBtn.style.cursor = 'pointer';
   }
 }
 
