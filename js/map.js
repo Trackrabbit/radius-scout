@@ -303,6 +303,12 @@ export function renderRealEstateMarkers(properties) {
             ${cleanStatus}
           </span>
         </div>
+
+        <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}" 
+           target="_blank" 
+           style="display: block; text-align: center; background: #f3f4f6; color: #374151; padding: 8px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; margin-top: 15px; border: 1px solid #d1d5db; transition: background 0.2s;">
+           🗺️ Open Street View
+        </a>
       </div>
     `;
 
