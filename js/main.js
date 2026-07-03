@@ -1,6 +1,6 @@
-// =========================
+// ========================
 // js/main.js
-// =========================
+// ========================
 import { POI_STATE, POI_CONFIG, selectedPOI } from './config.js';
 import { initUI, showLoading, setMatchedAddress, updateSummaryCounts, resetUI } from './ui.js';
 import { geocode, reverseGeocode, searchAddresses, fetchPOI } from './api.js';
