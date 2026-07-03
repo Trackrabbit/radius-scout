@@ -24,21 +24,17 @@ const summaryChevron = document.getElementById('summary-chevron');
 
 if (summaryToggle && summaryContent) {
   summaryToggle.addEventListener('click', () => {
-    // Toggle the collapsed class
     summaryContent.classList.toggle('collapsed');
     
-    // Rotate the chevron arrow
     if (summaryContent.classList.contains('collapsed')) {
-      summaryChevron.style.transform = 'rotate(-90deg)'; // Points left when closed
+      summaryChevron.style.transform = 'rotate(-90deg)'; 
     } else {
-      summaryChevron.style.transform = 'rotate(0deg)';   // Points down when open
+      summaryChevron.style.transform = 'rotate(0deg)';   
     }
   });
 }
 
 if (hiddenTrigger) {
-  // Don't change the cursor to a pointer so it remains a secret!
-  
   hiddenTrigger.addEventListener('click', async () => {
     if (!lastSuccessfulSearch) {
       console.warn("Run a standard search first to establish a center point.");
@@ -48,7 +44,6 @@ if (hiddenTrigger) {
     console.log("🤫 Secret Real Estate Mode Activated!");
     
     try {
-      // Pass our super secret 'real_estate' key to the proxy
       const realEstateData = await fetchPOI(
         lastSuccessfulSearch.center, 
         lastSuccessfulSearch.radius, 
@@ -57,14 +52,12 @@ if (hiddenTrigger) {
       
       console.log("Real Estate Data retrieved:", realEstateData);
       
-      // Drill down into the custom wrapper structure returned by the new API
       const propertyArray = realEstateData.data?.home_search?.results;
       
       if (propertyArray && propertyArray.length > 0) {
         renderRealEstateMarkers(propertyArray);
         renderPropertyList(propertyArray);
         
-        // Auto-collapse the search panel to reveal the list!
         document.getElementById('summary-content').classList.add('collapsed');
         document.getElementById('summary-chevron').style.transform = 'rotate(-90deg)';
       } else {
@@ -91,6 +84,11 @@ if (mobileToggle && panel) {
       mobileToggle.innerHTML = '🗺️ Map View';
       mobileToggle.style.backgroundColor = '#1f2937'; 
     }
+
+    // WAKE UP LEAFLET!
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 400);
   });
 }
 
@@ -134,23 +132,20 @@ async function handleSearch() {
     }
 
     map.setView([center.lat, center.lon], 15);
-    clearMapData(); // Prep map for new data
+    clearMapData(); 
     drawRadius(center, radius);
 
     const results = await fetchPOI(center, radius, selectedKeys);
     
-    // Render returns the counts needed for UI
     const counts = renderMarkers(results, center, selectedKeys);
     updateSummaryCounts(counts);
     updateURLState(center, radius);
 
-    // Save state for the super secret Real Estate mode
     lastSuccessfulSearch = {
       center: center,
       radius: radius 
     };
 
-    // Mobile UX Scroll
     if (window.innerWidth <= 768) {
       document.querySelector('.panel').scrollTo({ top: 9999, behavior: 'smooth' });
     }
@@ -243,7 +238,6 @@ function loadURLState() {
   selectedLocation = { lat: Number(lat), lon: Number(lon) };
   if (radius) document.getElementById('radiusSelect').value = radius;
 
-  // Reset then apply URL POIs
   Object.keys(POI_STATE).forEach(key => POI_STATE[key] = false);
   if (poi) {
     poi.split(',').forEach(key => {
@@ -251,7 +245,6 @@ function loadURLState() {
     });
   }
 
-  // Sync chips
   document.querySelectorAll('.poi-chip').forEach(chip => {
     chip.classList.toggle('active', POI_STATE[chip.dataset.key]);
   });
@@ -271,10 +264,8 @@ function renderPropertyList(properties) {
   const listContainer = document.getElementById('property-list');
   if (!listContainer) return;
   
-  // Wipe the list clean before adding new results
   listContainer.innerHTML = ''; 
   
-  // Add a quick result counter at the top
   const header = document.createElement('div');
   header.style.marginBottom = '10px';
   header.style.fontSize = '14px';
@@ -283,9 +274,7 @@ function renderPropertyList(properties) {
   header.innerText = `${properties.length} Properties Found`;
   listContainer.appendChild(header);
 
-  // Loop through the data and build a card for each property
   properties.forEach(prop => {
-    // Extract the exact same data we used for the map markers
     const lat = prop.location?.address?.coordinate?.lat;
     const lon = prop.location?.address?.coordinate?.lon;
     if (!lat || !lon) return;
@@ -305,7 +294,6 @@ function renderPropertyList(properties) {
     const isRental = prop.status && prop.status.toLowerCase().includes('rent');
     const cleanStatus = prop.status ? prop.status.replace('_', ' ') : 'Active';
 
-    // Create the card element
     const card = document.createElement('div');
     card.className = 'property-card';
     card.innerHTML = `
@@ -324,14 +312,12 @@ function renderPropertyList(properties) {
       </div>
     `;
 
-    // INTERACTIVITY: When clicked, fly the map to this house!
     card.addEventListener('click', () => {
       map.flyTo([lat, lon], 17, {
         animate: true,
         duration: 1.5 
       });
 
-      // Auto-hide the panel on mobile so they can see the map!
       if (window.innerWidth <= 768) {
         const panel = document.querySelector('.panel');
         const mobileToggle = document.getElementById('mobile-view-toggle');
@@ -340,9 +326,17 @@ function renderPropertyList(properties) {
           panel.classList.add('mobile-hidden');
           mobileToggle.innerHTML = '📋 List View';
           mobileToggle.style.backgroundColor = '#10b981';
+          
+          // WAKE UP LEAFLET HERE TOO!
+          setTimeout(() => {
+            map.invalidateSize();
+          }, 400);
         }
       }
     });
+
+    listContainer.appendChild(card);
+  });
 }
 
 // =========================
