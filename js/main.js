@@ -137,9 +137,12 @@ async function handleSearch() {
 
     const results = await fetchPOI(center, radius, selectedKeys);
     
+    // Render returns the counts needed for UI
     const counts = renderMarkers(results, center, selectedKeys);
     updateSummaryCounts(counts);
     updateURLState(center, radius);
+
+    document.getElementById('exportPdfBtn').style.display = 'block';
 
     lastSuccessfulSearch = {
       center: center,
@@ -336,6 +339,53 @@ function renderPropertyList(properties) {
     });
 
     listContainer.appendChild(card);
+  });
+}
+
+// =========================
+// PDF EXPORT
+// =========================
+const exportBtn = document.getElementById('exportPdfBtn');
+if (exportBtn) {
+  exportBtn.addEventListener('click', () => {
+    // 1. Change button text so the user knows it's working
+    const originalText = exportBtn.innerHTML;
+    exportBtn.innerHTML = '⏳ Generating...';
+    
+    // 2. Grab the current address for the title
+    const currentAddress = document.getElementById('addressInput').value || 'Selected Area';
+    
+    // 3. Create a temporary, clean container just for the PDF
+    const printContainer = document.createElement('div');
+    printContainer.style.padding = '20px';
+    printContainer.style.fontFamily = 'system-ui, sans-serif';
+    printContainer.style.color = '#1f2937';
+    
+    // 4. Build the report layout
+    printContainer.innerHTML = `
+      <h1 style="color: #10b981; margin-bottom: 5px;">Area Scouting Report</h1>
+      <h3 style="margin-top: 0; color: #6b7280; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">📍 ${currentAddress}</h3>
+      
+      <h2 style="margin-top: 20px;">Points of Interest Summary</h2>
+      ${document.getElementById('summaryGrid').outerHTML}
+      
+      <h2 style="margin-top: 30px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Available Real Estate</h2>
+      ${document.getElementById('property-list').outerHTML}
+    `;
+
+    // 5. Configure the PDF settings
+    const opt = {
+      margin:       0.5,
+      filename:     `Scouting-Report-${currentAddress.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    // 6. Generate and download!
+    html2pdf().set(opt).from(printContainer).save().then(() => {
+      exportBtn.innerHTML = originalText; // Restore button text
+    });
   });
 }
 
