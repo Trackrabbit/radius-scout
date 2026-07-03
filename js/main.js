@@ -77,6 +77,23 @@ if (hiddenTrigger) {
   });
 }
 
+const mobileToggle = document.getElementById('mobile-view-toggle');
+const panel = document.querySelector('.panel');
+
+if (mobileToggle && panel) {
+  mobileToggle.addEventListener('click', () => {
+    panel.classList.toggle('mobile-hidden');
+    
+    if (panel.classList.contains('mobile-hidden')) {
+      mobileToggle.innerHTML = '📋 List View';
+      mobileToggle.style.backgroundColor = '#10b981'; 
+    } else {
+      mobileToggle.innerHTML = '🗺️ Map View';
+      mobileToggle.style.backgroundColor = '#1f2937'; 
+    }
+  });
+}
+
 // =========================
 // CORE ACTIONS
 // =========================
