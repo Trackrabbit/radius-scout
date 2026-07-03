@@ -4,7 +4,7 @@
 import { POI_STATE, POI_CONFIG, selectedPOI } from './config.js';
 import { initUI, showLoading, setMatchedAddress, updateSummaryCounts, resetUI } from './ui.js';
 import { geocode, reverseGeocode, searchAddresses, fetchPOI } from './api.js';
-import { map, initMap, clearMapData, drawRadius, renderMarkers, applyFilter, resetMapView, renderRealEstateMarkers } from './map.js';
+import { map, initMap, clearMapData, drawRadius, renderMarkers, applyFilter, resetMapView, renderRealEstateMarkers, radiusCircle } from './map.js';
 
 // APP STATE
 let searchInProgress = false;
@@ -343,49 +343,90 @@ function renderPropertyList(properties) {
 }
 
 // =========================
-// PDF EXPORT
+// PRO PDF EXPORT (MAP + LAYOUT)
 // =========================
 const exportBtn = document.getElementById('exportPdfBtn');
 if (exportBtn) {
   exportBtn.addEventListener('click', () => {
-    // 1. Change button text so the user knows it's working
     const originalText = exportBtn.innerHTML;
-    exportBtn.innerHTML = '⏳ Generating...';
+    exportBtn.innerHTML = '📸 Focusing Map...';
     
-    // 2. Grab the current address for the title
-    const currentAddress = document.getElementById('addressInput').value || 'Selected Area';
-    
-    // 3. Create a temporary, clean container just for the PDF
-    const printContainer = document.createElement('div');
-    printContainer.style.padding = '20px';
-    printContainer.style.fontFamily = 'system-ui, sans-serif';
-    printContainer.style.color = '#1f2937';
-    
-    // 4. Build the report layout
-    printContainer.innerHTML = `
-      <h1 style="color: #10b981; margin-bottom: 5px;">Area Scouting Report</h1>
-      <h3 style="margin-top: 0; color: #6b7280; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">📍 ${currentAddress}</h3>
-      
-      <h2 style="margin-top: 20px;">Points of Interest Summary</h2>
-      ${document.getElementById('summaryGrid').outerHTML}
-      
-      <h2 style="margin-top: 30px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Available Real Estate</h2>
-      ${document.getElementById('property-list').outerHTML}
-    `;
+    if (radiusCircle) {
+      map.fitBounds(radiusCircle.getBounds(), { padding: [20, 20] });
+    }
 
-    // 5. Configure the PDF settings
-    const opt = {
-      margin:       0.5,
-      filename:     `Scouting-Report-${currentAddress.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2 },
-      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
+    setTimeout(async () => {
+      exportBtn.innerHTML = '📸 Capturing Map...';
+      
+      try {
+        const mapDiv = document.getElementById('map');
+        
+        const canvas = await html2canvas(mapDiv, {
+          useCORS: true, 
+          allowTaint: false,
+          scale: 2 
+        });
+        
+        exportBtn.innerHTML = '📄 Formatting...';
+        const mapDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        
+        const currentAddress = document.getElementById('addressInput').value || 'Selected Area';
+        const propertyCards = document.getElementById('property-list').innerHTML;
+        const summaryGrid = document.getElementById('summaryGrid').innerHTML;
 
-    // 6. Generate and download!
-    html2pdf().set(opt).from(printContainer).save().then(() => {
-      exportBtn.innerHTML = originalText; // Restore button text
-    });
+        const printContainer = document.createElement('div');
+        printContainer.innerHTML = `
+          <div style="padding: 30px; font-family: 'Helvetica Neue', Helvetica, sans-serif; color: #1f2937;">
+            
+            <!-- Header -->
+            <div style="border-bottom: 3px solid #10b981; padding-bottom: 15px; margin-bottom: 25px;">
+              <h1 style="margin: 0; font-size: 28px; color: #111827;">Location Scouting Report</h1>
+              <h2 style="margin: 5px 0 0 0; font-size: 16px; color: #6b7280; font-weight: 500;">📍 ${currentAddress}</h2>
+            </div>
+
+            <!-- The Captured Map Image -->
+            <div style="margin-bottom: 25px; page-break-inside: avoid;">
+              <img src="${mapDataUrl}" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; border: 1px solid #d1d5db; box-shadow: 0 4px 6px rgba(0,0,0,0.05);" />
+            </div>
+
+            <!-- Amenities Summary -->
+            <div style="page-break-inside: avoid; margin-bottom: 30px;">
+              <h3 style="font-size: 18px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 15px;">Neighborhood Amenities</h3>
+              <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                ${summaryGrid}
+              </div>
+            </div>
+
+            <!-- Real Estate List (Forced into a clean 2-column grid!) -->
+            <div>
+              <h3 style="font-size: 18px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 15px;">Available Real Estate</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                ${propertyCards}
+              </div>
+            </div>
+
+          </div>
+        `;
+
+        // 4. Generate the PDF
+        const opt = {
+          margin:       0.2,
+          filename:     `Scout-Report-${currentAddress.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2 },
+          jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(printContainer).save().then(() => {
+          exportBtn.innerHTML = originalText;
+        });
+
+      } catch (error) {
+        console.error("Map Capture Failed:", error);
+        alert("Failed to capture the map image.");
+        exportBtn.innerHTML = originalText;
+      }
+    }, 800); // The timer that waits for the map zoom
   });
 }
 
