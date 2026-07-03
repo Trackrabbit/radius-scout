@@ -676,7 +676,10 @@ button:active,
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 9999;
+    
+    z-index: 999999 !important; 
+    pointer-events: auto !important; 
+    
     background-color: #1f2937;
     color: #ffffff;
     border: 2px solid #ffffff;
@@ -684,7 +687,7 @@ button:active,
     border-radius: 30px;
     font-size: 14px;
     font-weight: 700;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     cursor: pointer;
     transition: background-color 0.2s;
   }
@@ -693,7 +696,6 @@ button:active,
     background-color: #10b981;
   }
 
-  /* Smoothly slide the panel down and out of the way */
   .panel {
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
   }
@@ -701,6 +703,6 @@ button:active,
   .panel.mobile-hidden {
     transform: translateY(120%);
     opacity: 0;
-    pointer-events: none; /* Prevents invisible clicks */
+    pointer-events: none !important; 
   }
 }
