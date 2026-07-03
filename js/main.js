@@ -352,11 +352,11 @@ if (exportBtn) {
     exportBtn.innerHTML = '📸 Focusing Map...';
     
     if (radiusCircle) {
-      map.fitBounds(radiusCircle.getBounds(), { padding: [20, 20] });
+      map.fitBounds(radiusCircle.getBounds(), { padding: [20, 20], animate: false });
     }
 
     setTimeout(async () => {
-      exportBtn.innerHTML = '📸 Capturing Map...';
+      exportBtn.innerHTML = '📸 Capturing...';
       
       try {
         const mapDiv = document.getElementById('map');
@@ -375,8 +375,18 @@ if (exportBtn) {
         const summaryGrid = document.getElementById('summaryGrid').innerHTML;
 
         const printContainer = document.createElement('div');
+        printContainer.style.width = '800px'; 
+        printContainer.style.backgroundColor = '#ffffff';
+
         printContainer.innerHTML = `
-          <div style="padding: 30px; font-family: 'Helvetica Neue', Helvetica, sans-serif; color: #1f2937;">
+          <style>
+            /* Force the elements to look good and PREVENT page-break chopping */
+            .property-card { page-break-inside: avoid !important; border: 1px solid #d1d5db; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #ffffff; }
+            .summary-item { page-break-inside: avoid !important; border: 1px solid #e5e7eb; padding: 12px; border-radius: 8px; background-color: #f9fafb; text-align: center; margin-bottom: 10px;}
+            h1, h2, h3 { margin-top: 0; }
+          </style>
+          
+          <div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, sans-serif; color: #1f2937;">
             
             <!-- Header -->
             <div style="border-bottom: 3px solid #10b981; padding-bottom: 15px; margin-bottom: 25px;">
@@ -385,21 +395,22 @@ if (exportBtn) {
             </div>
 
             <!-- The Captured Map Image -->
-            <div style="margin-bottom: 25px; page-break-inside: avoid;">
-              <img src="${mapDataUrl}" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; border: 1px solid #d1d5db; box-shadow: 0 4px 6px rgba(0,0,0,0.05);" />
+            <div style="margin-bottom: 30px; page-break-inside: avoid;">
+              <img src="${mapDataUrl}" style="width: 100%; height: auto; max-height: 450px; object-fit: cover; border-radius: 8px; border: 1px solid #d1d5db; box-shadow: 0 4px 6px rgba(0,0,0,0.05);" />
             </div>
 
             <!-- Amenities Summary -->
-            <div style="page-break-inside: avoid; margin-bottom: 30px;">
-              <h3 style="font-size: 18px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 15px;">Neighborhood Amenities</h3>
-              <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <div style="page-break-inside: avoid; margin-bottom: 40px;">
+              <h3 style="font-size: 18px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 15px; color: #374151;">Neighborhood Amenities</h3>
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
                 ${summaryGrid}
               </div>
             </div>
 
-            <!-- Real Estate List (Forced into a clean 2-column grid!) -->
+            <!-- Real Estate List -->
             <div>
-              <h3 style="font-size: 18px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 15px;">Available Real Estate</h3>
+              <h3 style="font-size: 18px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 15px; color: #374151;">Available Real Estate</h3>
+              <!-- 2-Column Grid for Properties -->
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 ${propertyCards}
               </div>
@@ -408,9 +419,8 @@ if (exportBtn) {
           </div>
         `;
 
-        // 4. Generate the PDF
         const opt = {
-          margin:       0.2,
+          margin:       0,
           filename:     `Scout-Report-${currentAddress.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`,
           image:        { type: 'jpeg', quality: 0.98 },
           html2canvas:  { scale: 2 },
@@ -426,7 +436,7 @@ if (exportBtn) {
         alert("Failed to capture the map image.");
         exportBtn.innerHTML = originalText;
       }
-    }, 800); // The timer that waits for the map zoom
+    }, 1000);
   });
 }
 
