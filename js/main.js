@@ -330,10 +330,19 @@ function renderPropertyList(properties) {
         animate: true,
         duration: 1.5 
       });
-    });
 
-    listContainer.appendChild(card);
-  });
+      // Auto-hide the panel on mobile so they can see the map!
+      if (window.innerWidth <= 768) {
+        const panel = document.querySelector('.panel');
+        const mobileToggle = document.getElementById('mobile-view-toggle');
+        
+        if (panel && mobileToggle) {
+          panel.classList.add('mobile-hidden');
+          mobileToggle.innerHTML = '📋 List View';
+          mobileToggle.style.backgroundColor = '#10b981';
+        }
+      }
+    });
 }
 
 // =========================
