@@ -3,7 +3,9 @@
 // ========================
 import { POI_CONFIG } from './config.js';
 
-export const map = L.map('map');
+export const map = L.map('map', {
+  preferCanvas: true
+});
 export let markerLayer = L.layerGroup().addTo(map);
 export let radiusCircle = null;
 export let centerMarker = null;
