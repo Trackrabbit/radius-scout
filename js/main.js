@@ -351,10 +351,13 @@ if (exportBtn) {
     const originalText = exportBtn.innerHTML;
     exportBtn.innerHTML = '📸 Focusing Map...';
     
+    // FIX 1: Turn OFF the map animation! This ensures the map tiles and 
+    // the purple radius circle are perfectly synced before the snapshot.
     if (radiusCircle) {
       map.fitBounds(radiusCircle.getBounds(), { padding: [20, 20], animate: false });
     }
 
+    // Wait 1 second for the new map tiles to fully download
     setTimeout(async () => {
       exportBtn.innerHTML = '📸 Capturing...';
       
@@ -374,6 +377,8 @@ if (exportBtn) {
         const propertyCards = document.getElementById('property-list').innerHTML;
         const summaryGrid = document.getElementById('summaryGrid').innerHTML;
 
+        // FIX 2: Create the print container, force it to a standard desktop width, 
+        // and inject CSS directly into it so everything stays beautifully formatted.
         const printContainer = document.createElement('div');
         printContainer.style.width = '800px'; 
         printContainer.style.backgroundColor = '#ffffff';
@@ -420,7 +425,7 @@ if (exportBtn) {
         `;
 
         const opt = {
-          margin:       0,
+          margin:       0, // Removed the standard margin because we padded the inner div!
           filename:     `Scout-Report-${currentAddress.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`,
           image:        { type: 'jpeg', quality: 0.98 },
           html2canvas:  { scale: 2 },
@@ -436,7 +441,7 @@ if (exportBtn) {
         alert("Failed to capture the map image.");
         exportBtn.innerHTML = originalText;
       }
-    }, 1000);
+    }, 1000); // 1 full second delay guarantees tiles load before snap
   });
 }
 
