@@ -1,6 +1,6 @@
-// ===============
+// ================
 // js/config.js
-// ===============
+// ================
 
 export const POI_CONFIG = {
   worship: { label: 'Worship', icon: '⛪', groups: ['family', 'community'], default: true, filters: [['amenity', 'place_of_worship']] },
