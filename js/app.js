@@ -319,19 +319,12 @@ const POI_PRESETS = {
 const POI_GROUPS = {
 
   family: "🏠 Family & Community",
-
   essential: "🚨 Essential Services",
-
   transportation: "🚌 Transportation",
-
   dining: "🍔 Dining & Shopping",
-
   business: "🏢 Housing & Business",
-
   recreation: "🌳 Recreation",
-
   community: "🤝 Community",
-
   realestate: "🏠 Real Estate"
 
 };
@@ -625,6 +618,11 @@ document
     'https://z.overpass-api.de/api/interpreter'
   ];
 
+  const NOMINATIM_SERVERS = [
+    'https://nominatim.openstreetmap.org',
+    'https://nominatim.geocoding.ai'
+  ];
+
 // =========================
 // HELPERS
 // =========================
@@ -714,68 +712,124 @@ function formatPhotonLabel(feature) {
   return parts.length ? parts.join(', ') : (p.name || 'Selected Location');
 }
 
-async function reverseGeocode(lat, lon) {
-  try {
-    const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`);
-    const data = await res.json();
-
-    if (data.features && data.features.length > 0) {
-      return formatPhotonLabel(data.features[0]);
-    }
-  } catch (err) {
-    console.warn("Photon reverse geocode failed:", err);
-  }
-  return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-}
+// =========================
+// GEOCODING & AUTOCOMPLETE (Dual-Service Fallback)
+// =========================
 
 async function geocode(address) {
+  const center = map.getCenter();
+  const biasParams = `&lat=${center.lat}&lon=${center.lon}`;
+
+  // 1. Primary Attempt: Photon API
   try {
-    // Get current map center to bias results toward where the user is looking
-    const center = map.getCenter();
-    const biasParams = `&lat=${center.lat}&lon=${center.lon}`;
-    
-    // Pass raw clean address without hardcoded city/state
     const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(address)}${biasParams}&limit=1&cb=${Date.now()}`);
-    const data = await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      if (data.features && data.features.length > 0) {
+        const feat = data.features[0];
+        const coords = feat.geometry.coordinates; // [lon, lat]
+        const label = formatPhotonLabel(feat);
 
-    if (data.features && data.features.length > 0) {
-      const feat = data.features[0];
-      const coords = feat.geometry.coordinates; // Photon returns [lon, lat]
-      const label = formatPhotonLabel(feat);
-
-      document.getElementById('matchedAddress').innerHTML = `
-        <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
-          Matched Address
-        </div>
-        <div>
-          ${label}
-        </div>
-      `;
-
-      return {
-        lat: coords[1],
-        lon: coords[0]
-      };
+        document.getElementById('matchedAddress').innerHTML = `
+          <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">Matched Address</div>
+          <div>${label}</div>
+        `;
+        return { lat: coords[1], lon: coords[0] };
+      }
     }
   } catch (err) {
-    console.warn("Photon geocode failed:", err);
+    console.warn("Photon failed, falling back to Nominatim...", err);
   }
 
-  throw new Error('Address service is temporarily unavailable. Please verify the address and try again.');
+  // 2. Secondary Fallback: Nominatim API
+  for (const server of NOMINATIM_SERVERS) {
+    try {
+      const res = await fetch(`${server}/search?format=json&limit=1&q=${encodeURIComponent(address)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          document.getElementById('matchedAddress').innerHTML = `
+            <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">Matched Address (Fallback)</div>
+            <div>${data[0].display_name}</div>
+          `;
+          return { lat: Number(data[0].lat), lon: Number(data[0].lon) };
+        }
+      }
+    } catch (err) {
+      console.warn(`Nominatim server ${server} failed:`, err);
+    }
+  }
+
+  throw new Error('Address services are temporarily busy. Please try again or search by street name.');
 }
 
-async function searchAddresses(query){
+async function searchAddresses(query) {
+  const center = map.getCenter();
+  const biasParams = `&lat=${center.lat}&lon=${center.lon}`;
+
+  // Attempt Photon first for autocomplete
   try {
-    const center = map.getCenter();
-    const biasParams = `&lat=${center.lat}&lon=${center.lon}`;
-    
     const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}${biasParams}&limit=8&cb=${Date.now()}`);
-    const data = await res.json();
-    return data.features || [];
+    if (res.ok) {
+      const data = await res.json();
+      if (data.features && data.features.length > 0) return data.features;
+    }
   } catch (err) {
-    console.error("Photon search failed:", err);
-    return [];
+    console.warn("Photon autocomplete failed, falling back to Nominatim...", err);
   }
+
+  // Fallback to Nominatim autocomplete if Photon drops
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`);
+    if (res.ok) {
+      const data = await res.json();
+      // Format Nominatim results to match Photon's GeoJSON structure for renderSuggestions()
+      return data.map(item => ({
+        geometry: { coordinates: [Number(item.lon), Number(item.lat)] },
+        properties: {
+          name: item.display_name.split(',')[0],
+          street: item.address?.road || '',
+          housenumber: item.address?.house_number || '',
+          city: item.address?.city || item.address?.town || '',
+          state: item.address?.state || ''
+        }
+      }));
+    }
+  } catch (err) {
+    console.error("All address autocomplete services failed:", err);
+  }
+
+  return [];
+}
+
+async function reverseGeocode(lat, lon) {
+  // 1. Try Photon reverse
+  try {
+    const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.features && data.features.length > 0) {
+        return formatPhotonLabel(data.features[0]);
+      }
+    }
+  } catch (err) {
+    console.warn("Photon reverse failed, using Nominatim...", err);
+  }
+
+  // 2. Try Nominatim reverse
+  for (const server of NOMINATIM_SERVERS) {
+    try {
+      const res = await fetch(`${server}/reverse?format=json&lat=${lat}&lon=${lon}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.display_name) return data.display_name;
+      }
+    } catch (err) {
+      continue;
+    }
+  }
+
+  return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
 }
 
 function renderSuggestions(results){
