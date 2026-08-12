@@ -393,33 +393,18 @@ function cleanAddress(address) {
 const map = L.map('map');
 
 if (navigator.geolocation) {
-
   navigator.geolocation.getCurrentPosition(
-
     pos => {
-
-      map.setView(
-        [
-          pos.coords.latitude,
-          pos.coords.longitude
-        ],
-        13
-      );
-
+      map.setView([pos.coords.latitude, pos.coords.longitude], 13);
     },
-
     () => {
-
-      map.setView([32.8407, -83.6324], 13); // Default Macon center
-
+      // Fallback: Center of contiguous US if geolocation is denied/fails
+      map.setView([39.8283, -98.5795], 4);
     }
-
   );
-
 } else {
-
-  map.setView([32.8407, -83.6324], 13);
-
+  // Fallback: Center of contiguous US
+  map.setView([39.8283, -98.5795], 4);
 }
 
 L.tileLayer(
@@ -645,37 +630,18 @@ document
 // =========================
 
 function resetMapView(){
-
   if(navigator.geolocation){
-
     navigator.geolocation.getCurrentPosition(
-
       pos => {
-
-        map.setView(
-          [
-            pos.coords.latitude,
-            pos.coords.longitude
-          ],
-          13
-        );
-
+        map.setView([pos.coords.latitude, pos.coords.longitude], 13);
       },
-
       () => {
-
-        map.setView([32.8407, -83.6324],13);
-
+        map.setView([39.8283, -98.5795], 4);
       }
-
     );
-
-  }else{
-
-    map.setView([32.8407, -83.6324],13);
-
+  } else {
+    map.setView([39.8283, -98.5795], 4);
   }
-
 }
 
 function selectedPOI(){
@@ -764,8 +730,12 @@ async function reverseGeocode(lat, lon) {
 
 async function geocode(address) {
   try {
-    const queryText = address.toLowerCase().includes("macon") ? address : `${address}, Macon, GA`;
-    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(queryText)}&limit=1&cb=${Date.now()}`);
+    // Get current map center to bias results toward where the user is looking
+    const center = map.getCenter();
+    const biasParams = `&lat=${center.lat}&lon=${center.lon}`;
+    
+    // Pass raw clean address without hardcoded city/state
+    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(address)}${biasParams}&limit=1&cb=${Date.now()}`);
     const data = await res.json();
 
     if (data.features && data.features.length > 0) {
@@ -791,13 +761,15 @@ async function geocode(address) {
     console.warn("Photon geocode failed:", err);
   }
 
-  throw new Error('Address service is temporarily unavailable. Try entering a nearby street name or landmark.');
+  throw new Error('Address service is temporarily unavailable. Please verify the address and try again.');
 }
 
 async function searchAddresses(query){
   try {
-    const queryText = query.toLowerCase().includes("macon") ? query : `${query}, Macon, GA`;
-    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(queryText)}&limit=8&cb=${Date.now()}`);
+    const center = map.getCenter();
+    const biasParams = `&lat=${center.lat}&lon=${center.lon}`;
+    
+    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}${biasParams}&limit=8&cb=${Date.now()}`);
     const data = await res.json();
     return data.features || [];
   } catch (err) {
