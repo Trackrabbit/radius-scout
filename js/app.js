@@ -5,7 +5,7 @@
 let searchInProgress = false;
 
 // =========================
-// POI CONFIG
+// POI CONFIG (Expanded Tagging)
 // =========================
 
 const POI_CONFIG = {
@@ -16,7 +16,14 @@ const POI_CONFIG = {
     groups:['family','community'],
     default:true,
     filters:[
-      ['amenity','place_of_worship']
+      ['amenity','place_of_worship'],
+      ['building','church'],
+      ['building','cathedral'],
+      ['building','chapel'],
+      ['building','mosque'],
+      ['building','synagogue'],
+      ['building','temple'],
+      ['landuse','religious']
     ]
   },
 
@@ -26,7 +33,8 @@ const POI_CONFIG = {
     groups:['family'],
     default:true,
     filters:[
-      ['amenity','school']
+      ['amenity','school'],
+      ['building','school']
     ]
   },
 
@@ -37,7 +45,9 @@ const POI_CONFIG = {
     default:true,
     filters:[
       ['amenity','college'],
-      ['amenity','university']
+      ['amenity','university'],
+      ['building','college'],
+      ['building','university']
     ]
   },
 
@@ -47,7 +57,8 @@ const POI_CONFIG = {
     groups:['family'],
     default:true,
     filters:[
-      ['amenity','kindergarten']
+      ['amenity','kindergarten'],
+      ['building','kindergarten']
     ]
   },
 
@@ -57,7 +68,9 @@ const POI_CONFIG = {
     groups:['family'],
     default:true,
     filters:[
-      ['amenity','childcare']
+      ['amenity','childcare'],
+      ['amenity','daycare'],
+      ['building','childcare']
     ]
   },
 
@@ -67,7 +80,8 @@ const POI_CONFIG = {
     groups:['family','community'],
     default:true,
     filters:[
-      ['amenity','library']
+      ['amenity','library'],
+      ['building','library']
     ]
   },
 
@@ -77,7 +91,9 @@ const POI_CONFIG = {
     groups:['family','recreation'],
     default:true,
     filters:[
-      ['leisure','park']
+      ['leisure','park'],
+      ['landuse','recreation_ground'],
+      ['landuse','village_green']
     ]
   },
 
@@ -97,7 +113,8 @@ const POI_CONFIG = {
     groups:['recreation'],
     default:true,
     filters:[
-      ['leisure','swimming_pool']
+      ['leisure','swimming_pool'],
+      ['amenity','swimming_pool']
     ]
   },
 
@@ -107,7 +124,9 @@ const POI_CONFIG = {
     groups:['transportation'],
     default:true,
     filters:[
-      ['highway','bus_stop']
+      ['highway','bus_stop'],
+      ['public_transport','platform'],
+      ['public_transport','stop_position']
     ]
   },
 
@@ -117,7 +136,8 @@ const POI_CONFIG = {
     groups:['transportation'],
     default:true,
     filters:[
-      ['amenity','bus_station']
+      ['amenity','bus_station'],
+      ['public_transport','station']
     ]
   },
 
@@ -190,7 +210,8 @@ const POI_CONFIG = {
     groups:['essential'],
     default:false,
     filters:[
-      ['amenity','hospital']
+      ['amenity','hospital'],
+      ['building','hospital']
     ]
   },
 
@@ -240,7 +261,8 @@ const POI_CONFIG = {
     groups:['essential','family'],
     default:false,
     filters:[
-      ['shop','supermarket']
+      ['shop','supermarket'],
+      ['shop','grocery']
     ]
   }
 
@@ -388,7 +410,7 @@ if (navigator.geolocation) {
 
     () => {
 
-      map.setView([20,0],2);
+      map.setView([32.8407, -83.6324], 13); // Default Macon center
 
     }
 
@@ -396,7 +418,7 @@ if (navigator.geolocation) {
 
 } else {
 
-  map.setView([20,0],2);
+  map.setView([32.8407, -83.6324], 13);
 
 }
 
@@ -436,14 +458,10 @@ Object.keys(POI_CONFIG).forEach(key => {
 const poiContainer = document.getElementById('poiContainer');
 const summaryGrid = document.getElementById('summaryGrid');
 
-// clear containers (important if re-render ever happens later)
-
 poiContainer.innerHTML = '';
 summaryGrid.innerHTML = '';
 
 const grouped = groupPOIs();
-
-// Track summary cards so we can still update counts
 
 const summaryCards = {};
 
@@ -528,7 +546,7 @@ Object.entries(grouped).forEach(([groupKey, items]) => {
 });
 
 // =========================
-// SUMMARY CARDS (unchanged but preserved)
+// SUMMARY CARDS
 // =========================
 
 Object.entries(POI_CONFIG).forEach(([key, poi]) => {
@@ -555,7 +573,7 @@ Object.entries(POI_CONFIG).forEach(([key, poi]) => {
 });
 
 // =========================
-// INPUT LISTENER
+// INPUT LISTENER (PHOTON AUTOCOMPLETE)
 // =========================
 
 document
@@ -566,8 +584,7 @@ document
 
     clearTimeout(autocompleteTimer);
 
-    const query =
-      e.target.value.trim();
+    const query = e.target.value.trim();
 
     if(query.length < 3){
 
@@ -583,8 +600,7 @@ document
 
         try{
 
-          const results =
-            await searchAddresses(query);
+          const results = await searchAddresses(query);
 
           renderSuggestions(results);
 
@@ -617,20 +633,12 @@ document
 // SERVER ARRAYS
 // =========================
 
-  const NOMINATIM_SERVERS = [
-    'https://nominatim.openstreetmap.org',
-    'https://nominatim.geocoding.ai'
-  ];
-
   const OVERPASS_SERVERS = [
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
-    'https://lz4.overpass-api.de/api/interpreter'
+    'https://lz4.overpass-api.de/api/interpreter',
+    'https://z.overpass-api.de/api/interpreter'
   ];
-
-// const PROPERTY_PROVIDERS = [ ... ]; // Phase 2
-
-// const DEMOGRAPHIC_PROVIDERS = [ ... ]; // Phase 2
 
 // =========================
 // HELPERS
@@ -656,7 +664,7 @@ function resetMapView(){
 
       () => {
 
-        map.setView([20,0],2);
+        map.setView([32.8407, -83.6324],13);
 
       }
 
@@ -664,7 +672,7 @@ function resetMapView(){
 
   }else{
 
-    map.setView([20,0],2);
+    map.setView([32.8407, -83.6324],13);
 
   }
 
@@ -697,8 +705,7 @@ function showLoading(show){
 
   document.getElementById('searchBtn').disabled = show;
 
-  const matched =
-    document.getElementById('matchedAddress');
+  const matched = document.getElementById('matchedAddress');
 
   if(show){
 
@@ -721,109 +728,87 @@ function showLoading(show){
 
 }
 
-async function reverseGeocode(lat, lon) {
+// Format Photon GeoJSON feature into a readable address string
+function formatPhotonLabel(feature) {
+  const p = feature.properties || {};
+  const parts = [];
 
-  for (const server of NOMINATIM_SERVERS) {
-
-    try {
-
-      const response = await fetch(
-        `${server}/reverse?format=json&lat=${lat}&lon=${lon}`
-      );
-
-      const text = await response.text();
-
-      if (!text.startsWith('{')) {
-        throw new Error();
-      }
-
-      const data = JSON.parse(text);
-
-      return data.display_name || '';
-
-    }
-    catch (err) {
-
-      console.warn(`Reverse geocoder failed: ${server}`);
-
-    }
-
+  if (p.housenumber && p.street) {
+    parts.push(`${p.housenumber} ${p.street}`);
+  } else if (p.street) {
+    parts.push(p.street);
+  } else if (p.name) {
+    parts.push(p.name);
   }
 
-  return '';
+  if (p.city) parts.push(p.city);
+  if (p.state) parts.push(p.state);
+  if (p.postcode) parts.push(p.postcode);
 
+  return parts.length ? parts.join(', ') : (p.name || 'Selected Location');
+}
+
+async function reverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`);
+    const data = await res.json();
+
+    if (data.features && data.features.length > 0) {
+      return formatPhotonLabel(data.features[0]);
+    }
+  } catch (err) {
+    console.warn("Photon reverse geocode failed:", err);
+  }
+  return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
 }
 
 async function geocode(address) {
+  try {
+    const queryText = address.toLowerCase().includes("macon") ? address : `${address}, Macon, GA`;
+    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(queryText)}&limit=1&cb=${Date.now()}`);
+    const data = await res.json();
 
-  for (const server of NOMINATIM_SERVERS) {
-
-    try {
-
-      const response = await fetch(
-        `${server}/search?format=json&limit=1&q=${encodeURIComponent(address)}`
-      );
-
-      const text = await response.text();
-
-      const first = text.trim()[0];
-      
-      if (first !== '[' && first !== '{') {
-        throw new Error('Invalid JSON response');
-      }
-
-      const data = JSON.parse(text);
-
-      if (!data.length) {
-        continue;
-      }
+    if (data.features && data.features.length > 0) {
+      const feat = data.features[0];
+      const coords = feat.geometry.coordinates; // Photon returns [lon, lat]
+      const label = formatPhotonLabel(feat);
 
       document.getElementById('matchedAddress').innerHTML = `
         <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
           Matched Address
         </div>
         <div>
-          ${data[0].display_name}
+          ${label}
         </div>
       `;
 
       return {
-        lat: Number(data[0].lat),
-        lon: Number(data[0].lon)
+        lat: coords[1],
+        lon: coords[0]
       };
-
     }
-    catch (err) {
-
-      console.warn(
-        `Geocoder failed: ${server}`,
-        err
-      );
-
-    }
-
+  } catch (err) {
+    console.warn("Photon geocode failed:", err);
   }
 
-  throw new Error(
-    'Address service is temporarily unavailable.'
-  );
-
+  throw new Error('Address service is temporarily unavailable. Try entering a nearby street name or landmark.');
 }
 
 async function searchAddresses(query){
-
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`
-  );
-
-  return await response.json();
-
+  try {
+    const queryText = query.toLowerCase().includes("macon") ? query : `${query}, Macon, GA`;
+    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(queryText)}&limit=8&cb=${Date.now()}`);
+    const data = await res.json();
+    return data.features || [];
+  } catch (err) {
+    console.error("Photon search failed:", err);
+    return [];
+  }
 }
 
 function renderSuggestions(results){
 
-  const container =
-    document.getElementById('addressSuggestions');
+  const container = document.getElementById('addressSuggestions');
 
   if(!results.length){
 
@@ -834,50 +819,54 @@ function renderSuggestions(results){
 
   container.innerHTML = '';
 
-  results.forEach(result=>{
+  results.forEach(feat => {
 
-    const item =
-      document.createElement('div');
+    const props = feat.properties || {};
+    const coords = feat.geometry.coordinates;
+    const mainLabel = props.housenumber && props.street 
+      ? `${props.housenumber} ${props.street}` 
+      : (props.name || props.street || 'Address Result');
+    
+    const fullLabel = formatPhotonLabel(feat);
 
-    item.className =
-      'suggestion-item';
+    const item = document.createElement('div');
+
+    item.className = 'suggestion-item';
 
     item.innerHTML = `
       <div class="suggestion-main">
-        ${result.display_name.split(',')[0]}
+        ${mainLabel}
       </div>
 
       <div class="suggestion-secondary">
-        ${result.display_name}
+        ${fullLabel}
       </div>
     `;
 
     item.onclick = ()=>{
 
-      selectedLocation = result;
+      selectedLocation = {
+        lat: coords[1],
+        lon: coords[0],
+        display_name: fullLabel
+      };
 
-      document
-        .getElementById('addressInput')
-        .value = result.display_name;
+      document.getElementById('addressInput').value = fullLabel;
 
-      document
-        .getElementById('matchedAddress')
-        .innerHTML = `
-          <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
-            Selected Address
-          </div>
-          <div>
-            ${result.display_name}
-          </div>
-        `;
+      document.getElementById('matchedAddress').innerHTML = `
+        <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+          Selected Address
+        </div>
+        <div>
+          ${fullLabel}
+        </div>
+      `;
 
       container.style.display = 'none';
 
       setTimeout(() => {
 
-        document
-          .getElementById('searchBtn')
-          .click();
+        document.getElementById('searchBtn').click();
 
       }, 100);
 
@@ -939,14 +928,13 @@ async function fetchPOI(center, radius, keys) {
     
     try {
 
-      const response = await fetch(server, {
+      const response = await fetch(`${server}?cb=${Date.now()}`, {
         method: 'POST',
         body: query
       });
 
       const text = await response.text();
 
-      // Sometimes Overpass returns XML or HTML instead of JSON
       if (!text.startsWith('{')) {
         throw new Error('Non-JSON response');
       }
@@ -956,6 +944,7 @@ async function fetchPOI(center, radius, keys) {
       return data.elements || [];
 
     }
+
     catch (err) {
 
       console.warn(
@@ -999,11 +988,9 @@ function distanceMiles(lat1, lon1, lat2, lon2) {
 
   const R = 3958.8;
 
-  const dLat =
-    (lat2-lat1) * Math.PI / 180;
+  const dLat = (lat2-lat1) * Math.PI / 180;
 
-  const dLon =
-    (lon2-lon1) * Math.PI / 180;
+  const dLon = (lon2-lon1) * Math.PI / 180;
 
   const a =
     Math.sin(dLat/2)**2 +
@@ -1141,8 +1128,6 @@ document
         document.getElementById('addressInput').value
     );
     
-    // If we already have coordinates from URL or location button,
-    // don't require an address.
     if (!address && !selectedLocation) {
         alert('Enter an address');
         return;
@@ -1238,8 +1223,7 @@ document
         return;
       }
 
-      let type =
-        matchPOI(item.tags);
+      let type = matchPOI(item.tags);
 
       if(!type || !selected.includes(type)){
         type = selected[0];
@@ -1340,21 +1324,14 @@ document
   
         try{
       
-          const lat =
-            position.coords.latitude;
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
       
-          const lon =
-            position.coords.longitude;
-      
-          selectedLocation = {
-            lat,
-            lon
-          };
+          selectedLocation = { lat, lon };
       
           map.setView([lat, lon], 16);
       
-          const address =
-            await reverseGeocode(lat, lon);
+          const address = await reverseGeocode(lat, lon);
       
           document
             .getElementById('addressInput')
@@ -1406,6 +1383,7 @@ document
     );
 
   };
+
 // =========================
 // CLEAR
 // =========================
@@ -1414,42 +1392,34 @@ document
   .getElementById('clearBtn')
   .onclick = ()=>{
 
-    // Clear markers
     markerLayer.clearLayers();
 
     markersByType = {};
 
-    // Remove radius circle
     if(radiusCircle){
       map.removeLayer(radiusCircle);
       radiusCircle = null;
     }
 
-    // Clear selected location
     selectedLocation = null;
 
-    // Clear address field
     document.getElementById('addressInput').value = '';
 
-    // Clear suggestions
     document.getElementById('addressSuggestions').style.display = 'none';
     document.getElementById('addressSuggestions').innerHTML = '';
 
-    // Reset matched address panel
     document.getElementById('matchedAddress').innerHTML = `
       <div style="opacity:.7;">
         Ready for a new search
       </div>
     `;
 
-    // Reset summary counts
     Object.keys(POI_CONFIG).forEach(key => {
 
       document.getElementById(`count-${key}`).innerText = '0';
 
     });
 
-    // Clear active summary filter
     activeFilter = null;
 
     Object.keys(POI_STATE).forEach(key => {
@@ -1464,15 +1434,12 @@ document
     
     });
     
-    // Close all accordion groups
     document.querySelectorAll('.poi-group').forEach(group => {
       group.classList.remove('open');
     });
 
-    // Close popups
     map.closePopup();
     
-    // Return map to default view
     resetMapView();
 };
 
@@ -1496,7 +1463,6 @@ function loadURLState() {
     document.getElementById('radiusSelect').value = radius;
   }
 
-  // Reset all POIs
   Object.keys(POI_STATE).forEach(key => {
     POI_STATE[key] = false;
   });
@@ -1513,7 +1479,6 @@ function loadURLState() {
 
   }
 
-  // Sync chips
   document.querySelectorAll('.poi-chip').forEach(chip => {
 
     const key = chip.dataset.key;
@@ -1525,7 +1490,6 @@ function loadURLState() {
 
   });
 
-  // Show Shared Location
   reverseGeocode(
     selectedLocation.lat,
     selectedLocation.lon
