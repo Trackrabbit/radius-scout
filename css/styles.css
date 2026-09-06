@@ -595,3 +595,114 @@ button:active,
 
   opacity:.65;
 }
+
+/* Popup */
+
+.popup-card{
+  min-width:220px;
+}
+
+.popup-title{
+  font-size:15px;
+  font-weight:700;
+  margin-bottom:8px;
+  color:#111827;
+}
+
+.popup-line{
+  margin-top:6px;
+  font-size:13px;
+  line-height:1.4;
+}
+
+.popup-line a{
+  color:#8b5cf6;
+  text-decoration:none;
+}
+
+/* =========================
+   COLLAPSIBLE SUMMARY
+   ========================= */
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 10px;
+  user-select: none;
+}
+
+/* Force the text to be a light, readable gray by default */
+.summary-header h3, 
+.summary-header span {
+  color: #f3f4f6; 
+  transition: color 0.2s ease;
+}
+
+.summary-header:hover h3,
+.summary-header:hover span {
+  color: #10b981 !important;
+}
+
+.summary-content {
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, margin 0.4s ease-in-out;
+  max-height: 2500px; /* INCREASED */
+  opacity: 1;
+}
+
+.summary-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+  pointer-events: none;
+}
+
+/* =========================
+   MOBILE MAP/LIST TOGGLE
+   ========================= */
+.mobile-toggle-btn {
+  display: none; /* Hide on desktop */
+}
+
+@media (max-width: 768px) {
+  .mobile-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    
+    z-index: 999999 !important; 
+    pointer-events: auto !important; 
+    
+    background-color: #1f2937;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .mobile-toggle-btn:active {
+    background-color: #10b981;
+  }
+
+  .panel {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+  }
+
+  .panel.mobile-hidden {
+    transform: translateY(120%);
+    opacity: 0;
+    pointer-events: none !important; 
+  }
+}

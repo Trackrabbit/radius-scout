@@ -1,5 +1,11 @@
 // =========================
-// CONFIG
+// GLOBALS
+// =========================
+
+let searchInProgress = false;
+
+// =========================
+// POI CONFIG (Expanded Tagging)
 // =========================
 
 const POI_CONFIG = {
@@ -10,7 +16,14 @@ const POI_CONFIG = {
     groups:['family','community'],
     default:true,
     filters:[
-      ['amenity','place_of_worship']
+      ['amenity','place_of_worship'],
+      ['building','church'],
+      ['building','cathedral'],
+      ['building','chapel'],
+      ['building','mosque'],
+      ['building','synagogue'],
+      ['building','temple'],
+      ['landuse','religious']
     ]
   },
 
@@ -20,7 +33,8 @@ const POI_CONFIG = {
     groups:['family'],
     default:true,
     filters:[
-      ['amenity','school']
+      ['amenity','school'],
+      ['building','school']
     ]
   },
 
@@ -31,7 +45,9 @@ const POI_CONFIG = {
     default:true,
     filters:[
       ['amenity','college'],
-      ['amenity','university']
+      ['amenity','university'],
+      ['building','college'],
+      ['building','university']
     ]
   },
 
@@ -41,7 +57,8 @@ const POI_CONFIG = {
     groups:['family'],
     default:true,
     filters:[
-      ['amenity','kindergarten']
+      ['amenity','kindergarten'],
+      ['building','kindergarten']
     ]
   },
 
@@ -51,7 +68,9 @@ const POI_CONFIG = {
     groups:['family'],
     default:true,
     filters:[
-      ['amenity','childcare']
+      ['amenity','childcare'],
+      ['amenity','daycare'],
+      ['building','childcare']
     ]
   },
 
@@ -61,7 +80,8 @@ const POI_CONFIG = {
     groups:['family','community'],
     default:true,
     filters:[
-      ['amenity','library']
+      ['amenity','library'],
+      ['building','library']
     ]
   },
 
@@ -71,7 +91,9 @@ const POI_CONFIG = {
     groups:['family','recreation'],
     default:true,
     filters:[
-      ['leisure','park']
+      ['leisure','park'],
+      ['landuse','recreation_ground'],
+      ['landuse','village_green']
     ]
   },
 
@@ -91,7 +113,8 @@ const POI_CONFIG = {
     groups:['recreation'],
     default:true,
     filters:[
-      ['leisure','swimming_pool']
+      ['leisure','swimming_pool'],
+      ['amenity','swimming_pool']
     ]
   },
 
@@ -101,7 +124,9 @@ const POI_CONFIG = {
     groups:['transportation'],
     default:true,
     filters:[
-      ['highway','bus_stop']
+      ['highway','bus_stop'],
+      ['public_transport','platform'],
+      ['public_transport','stop_position']
     ]
   },
 
@@ -111,7 +136,8 @@ const POI_CONFIG = {
     groups:['transportation'],
     default:true,
     filters:[
-      ['amenity','bus_station']
+      ['amenity','bus_station'],
+      ['public_transport','station']
     ]
   },
 
@@ -184,7 +210,8 @@ const POI_CONFIG = {
     groups:['essential'],
     default:false,
     filters:[
-      ['amenity','hospital']
+      ['amenity','hospital'],
+      ['building','hospital']
     ]
   },
 
@@ -234,14 +261,15 @@ const POI_CONFIG = {
     groups:['essential','family'],
     default:false,
     filters:[
-      ['shop','supermarket']
+      ['shop','supermarket'],
+      ['shop','grocery']
     ]
   }
 
 };
 
 // =========================
-// PRESETS
+// POI PRESETS
 // =========================
 
 const POI_PRESETS = {
@@ -291,19 +319,12 @@ const POI_PRESETS = {
 const POI_GROUPS = {
 
   family: "🏠 Family & Community",
-
   essential: "🚨 Essential Services",
-
   transportation: "🚌 Transportation",
-
   dining: "🍔 Dining & Shopping",
-
   business: "🏢 Housing & Business",
-
   recreation: "🌳 Recreation",
-
   community: "🤝 Community",
-
   realestate: "🏠 Real Estate"
 
 };
@@ -365,33 +386,18 @@ function cleanAddress(address) {
 const map = L.map('map');
 
 if (navigator.geolocation) {
-
   navigator.geolocation.getCurrentPosition(
-
     pos => {
-
-      map.setView(
-        [
-          pos.coords.latitude,
-          pos.coords.longitude
-        ],
-        13
-      );
-
+      map.setView([pos.coords.latitude, pos.coords.longitude], 13);
     },
-
     () => {
-
-      map.setView([20,0],2);
-
+      // Fallback: Center of contiguous US if geolocation is denied/fails
+      map.setView([39.8283, -98.5795], 4);
     }
-
   );
-
 } else {
-
-  map.setView([20,0],2);
-
+  // Fallback: Center of contiguous US
+  map.setView([39.8283, -98.5795], 4);
 }
 
 L.tileLayer(
@@ -420,6 +426,7 @@ let matchedAddressBackup = '';
 const POI_STATE = {};
 
 // initialize state from config defaults
+
 Object.keys(POI_CONFIG).forEach(key => {
   POI_STATE[key] = POI_CONFIG[key].default || false;
 });
@@ -431,15 +438,10 @@ Object.keys(POI_CONFIG).forEach(key => {
 const poiContainer = document.getElementById('poiContainer');
 const summaryGrid = document.getElementById('summaryGrid');
 
-// clear containers (important if re-render ever happens later)
-
 poiContainer.innerHTML = '';
 summaryGrid.innerHTML = '';
 
 const grouped = groupPOIs();
-
-
-// Track summary cards so we can still update counts
 
 const summaryCards = {};
 
@@ -524,7 +526,7 @@ Object.entries(grouped).forEach(([groupKey, items]) => {
 });
 
 // =========================
-// SUMMARY CARDS (unchanged but preserved)
+// SUMMARY CARDS
 // =========================
 
 Object.entries(POI_CONFIG).forEach(([key, poi]) => {
@@ -551,7 +553,7 @@ Object.entries(POI_CONFIG).forEach(([key, poi]) => {
 });
 
 // =========================
-// INPUT LISTENER
+// INPUT LISTENER (PHOTON AUTOCOMPLETE)
 // =========================
 
 document
@@ -562,8 +564,7 @@ document
 
     clearTimeout(autocompleteTimer);
 
-    const query =
-      e.target.value.trim();
+    const query = e.target.value.trim();
 
     if(query.length < 3){
 
@@ -579,8 +580,7 @@ document
 
         try{
 
-          const results =
-            await searchAddresses(query);
+          const results = await searchAddresses(query);
 
           renderSuggestions(results);
 
@@ -610,41 +610,38 @@ document
   });
 
 // =========================
+// SERVER ARRAYS
+// =========================
+
+  const OVERPASS_SERVERS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://lz4.overpass-api.de/api/interpreter',
+    'https://z.overpass-api.de/api/interpreter'
+  ];
+
+  const NOMINATIM_SERVERS = [
+    'https://nominatim.openstreetmap.org',
+    'https://nominatim.geocoding.ai'
+  ];
+
+// =========================
 // HELPERS
 // =========================
 
 function resetMapView(){
-
   if(navigator.geolocation){
-
     navigator.geolocation.getCurrentPosition(
-
       pos => {
-
-        map.setView(
-          [
-            pos.coords.latitude,
-            pos.coords.longitude
-          ],
-          13
-        );
-
+        map.setView([pos.coords.latitude, pos.coords.longitude], 13);
       },
-
       () => {
-
-        map.setView([20,0],2);
-
+        map.setView([39.8283, -98.5795], 4);
       }
-
     );
-
-  }else{
-
-    map.setView([20,0],2);
-
+  } else {
+    map.setView([39.8283, -98.5795], 4);
   }
-
 }
 
 function selectedPOI(){
@@ -672,8 +669,9 @@ function updateURLState(center, radius) {
 
 function showLoading(show){
 
-  const matched =
-    document.getElementById('matchedAddress');
+  document.getElementById('searchBtn').disabled = show;
+
+  const matched = document.getElementById('matchedAddress');
 
   if(show){
 
@@ -845,20 +843,39 @@ async function geocode(address) {
 
 }
 
-async function searchAddresses(query){
+async function reverseGeocode(lat, lon) {
+  // 1. Try Photon reverse
+  try {
+    const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.features && data.features.length > 0) {
+        return formatPhotonLabel(data.features[0]);
+      }
+    }
+  } catch (err) {
+    console.warn("Photon reverse failed, using Nominatim...", err);
+  }
 
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`
-  );
+  // 2. Try Nominatim reverse
+  for (const server of NOMINATIM_SERVERS) {
+    try {
+      const res = await fetch(`${server}/reverse?format=json&lat=${lat}&lon=${lon}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.display_name) return data.display_name;
+      }
+    } catch (err) {
+      continue;
+    }
+  }
 
-  return await response.json();
-
+  return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
 }
 
 function renderSuggestions(results){
 
-  const container =
-    document.getElementById('addressSuggestions');
+  const container = document.getElementById('addressSuggestions');
 
   if(!results.length){
 
@@ -869,50 +886,54 @@ function renderSuggestions(results){
 
   container.innerHTML = '';
 
-  results.forEach(result=>{
+  results.forEach(feat => {
 
-    const item =
-      document.createElement('div');
+    const props = feat.properties || {};
+    const coords = feat.geometry.coordinates;
+    const mainLabel = props.housenumber && props.street 
+      ? `${props.housenumber} ${props.street}` 
+      : (props.name || props.street || 'Address Result');
+    
+    const fullLabel = formatPhotonLabel(feat);
 
-    item.className =
-      'suggestion-item';
+    const item = document.createElement('div');
+
+    item.className = 'suggestion-item';
 
     item.innerHTML = `
       <div class="suggestion-main">
-        ${result.display_name.split(',')[0]}
+        ${mainLabel}
       </div>
 
       <div class="suggestion-secondary">
-        ${result.display_name}
+        ${fullLabel}
       </div>
     `;
 
     item.onclick = ()=>{
 
-      selectedLocation = result;
+      selectedLocation = {
+        lat: coords[1],
+        lon: coords[0],
+        display_name: fullLabel
+      };
 
-      document
-        .getElementById('addressInput')
-        .value = result.display_name;
+      document.getElementById('addressInput').value = fullLabel;
 
-      document
-        .getElementById('matchedAddress')
-        .innerHTML = `
-          <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
-            Selected Address
-          </div>
-          <div>
-            ${result.display_name}
-          </div>
-        `;
+      document.getElementById('matchedAddress').innerHTML = `
+        <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+          Selected Address
+        </div>
+        <div>
+          ${fullLabel}
+        </div>
+      `;
 
       container.style.display = 'none';
 
       setTimeout(() => {
 
-        document
-          .getElementById('searchBtn')
-          .click();
+        document.getElementById('searchBtn').click();
 
       }, 100);
 
@@ -955,23 +976,18 @@ function buildQuery(center, radius, keys){
   });
 
   return `
-[out:json][timeout:25];
-(
-  ${queryParts.join('\n')}
-);
-out center;
-`;
+    [out:json][timeout:25];
+    (
+      ${queryParts.join('\n')}
+    );
+    out center;
+    `;
 
 }
 
 async function fetchPOI(center, radius, keys) {
 
   const query = buildQuery(center, radius, keys);
-  const OVERPASS_SERVERS = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://lz4.overpass-api.de/api/interpreter'
-  ];
 
   for (const server of OVERPASS_SERVERS) {
 
@@ -979,14 +995,13 @@ async function fetchPOI(center, radius, keys) {
     
     try {
 
-      const response = await fetch(server, {
+      const response = await fetch(`${server}?cb=${Date.now()}`, {
         method: 'POST',
         body: query
       });
 
       const text = await response.text();
 
-      // Sometimes Overpass returns XML or HTML instead of JSON
       if (!text.startsWith('{')) {
         throw new Error('Non-JSON response');
       }
@@ -996,6 +1011,7 @@ async function fetchPOI(center, radius, keys) {
       return data.elements || [];
 
     }
+
     catch (err) {
 
       console.warn(
@@ -1033,6 +1049,93 @@ function matchPOI(tags){
 
   return null;
 
+}
+
+function distanceMiles(lat1, lon1, lat2, lon2) {
+
+  const R = 3958.8;
+
+  const dLat = (lat2-lat1) * Math.PI / 180;
+
+  const dLon = (lon2-lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLon/2)**2;
+
+  return (
+    R * 2 *
+    Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1-a)
+    )
+  );
+
+}
+
+function buildPopup(item, type, center) {
+
+  const tags = item.tags || {};
+
+  const distance = distanceMiles(
+    center.lat,
+    center.lon,
+    item.lat || item.center?.lat,
+    item.lon || item.center?.lon
+  ).toFixed(2);
+
+  return `
+    <div class="popup-card">
+
+      <div class="popup-title">
+        ${POI_CONFIG[type].icon}
+        ${tags.name || POI_CONFIG[type].label}
+      </div>
+
+      ${
+        tags['addr:housenumber'] || tags['addr:street']
+          ? `
+            <div class="popup-line">
+              📍
+              ${tags['addr:housenumber'] || ''}
+              ${tags['addr:street'] || ''}
+            </div>
+          `
+          : ''
+      }
+
+      ${
+        tags.phone
+          ? `
+            <div class="popup-line">
+              📞 ${tags.phone}
+            </div>
+          `
+          : ''
+      }
+
+      ${
+        tags.website
+          ? `
+            <div class="popup-line">
+              🌐
+              <a href="${tags.website}"
+                 target="_blank">
+                 Website
+              </a>
+            </div>
+          `
+          : ''
+      }
+
+      <div class="popup-line">
+        📏 ${distance} mi away
+      </div>
+
+    </div>
+  `;
 }
 
 // =========================
@@ -1080,14 +1183,18 @@ document
   .getElementById('searchBtn')
   .onclick = async ()=>{
 
+  if (searchInProgress) {
+    return;
+  }
+
+  searchInProgress = true;
+
   try{
 
     const address = cleanAddress(
         document.getElementById('addressInput').value
     );
     
-    // If we already have coordinates from URL or location button,
-    // don't require an address.
     if (!address && !selectedLocation) {
         alert('Enter an address');
         return;
@@ -1183,8 +1290,7 @@ document
         return;
       }
 
-      let type =
-        matchPOI(item.tags);
+      let type = matchPOI(item.tags);
 
       if(!type || !selected.includes(type)){
         type = selected[0];
@@ -1209,11 +1315,13 @@ document
         }
       );
 
-      marker.bindPopup(`
-        <strong>
-          ${item.tags?.name || POI_CONFIG[type].label}
-        </strong>
-      `);
+      marker.bindPopup(
+        buildPopup(
+          item,
+          type,
+          center
+        )
+      );
 
       markersByType[type].push(marker);
 
@@ -1254,6 +1362,8 @@ document
 
     showLoading(false);
 
+    searchInProgress = false;
+
   }
 
 };
@@ -1281,21 +1391,14 @@ document
   
         try{
       
-          const lat =
-            position.coords.latitude;
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
       
-          const lon =
-            position.coords.longitude;
-      
-          selectedLocation = {
-            lat,
-            lon
-          };
+          selectedLocation = { lat, lon };
       
           map.setView([lat, lon], 16);
       
-          const address =
-            await reverseGeocode(lat, lon);
+          const address = await reverseGeocode(lat, lon);
       
           document
             .getElementById('addressInput')
@@ -1347,6 +1450,7 @@ document
     );
 
   };
+
 // =========================
 // CLEAR
 // =========================
@@ -1355,42 +1459,34 @@ document
   .getElementById('clearBtn')
   .onclick = ()=>{
 
-    // Clear markers
     markerLayer.clearLayers();
 
     markersByType = {};
 
-    // Remove radius circle
     if(radiusCircle){
       map.removeLayer(radiusCircle);
       radiusCircle = null;
     }
 
-    // Clear selected location
     selectedLocation = null;
 
-    // Clear address field
     document.getElementById('addressInput').value = '';
 
-    // Clear suggestions
     document.getElementById('addressSuggestions').style.display = 'none';
     document.getElementById('addressSuggestions').innerHTML = '';
 
-    // Reset matched address panel
     document.getElementById('matchedAddress').innerHTML = `
       <div style="opacity:.7;">
         Ready for a new search
       </div>
     `;
 
-    // Reset summary counts
     Object.keys(POI_CONFIG).forEach(key => {
 
       document.getElementById(`count-${key}`).innerText = '0';
 
     });
 
-    // Clear active summary filter
     activeFilter = null;
 
     Object.keys(POI_STATE).forEach(key => {
@@ -1405,15 +1501,12 @@ document
     
     });
     
-    // Close all accordion groups
     document.querySelectorAll('.poi-group').forEach(group => {
       group.classList.remove('open');
     });
 
-    // Close popups
     map.closePopup();
     
-    // Return map to default view
     resetMapView();
 };
 
@@ -1437,7 +1530,6 @@ function loadURLState() {
     document.getElementById('radiusSelect').value = radius;
   }
 
-  // Reset all POIs
   Object.keys(POI_STATE).forEach(key => {
     POI_STATE[key] = false;
   });
@@ -1454,7 +1546,6 @@ function loadURLState() {
 
   }
 
-  // Sync chips
   document.querySelectorAll('.poi-chip').forEach(chip => {
 
     const key = chip.dataset.key;
@@ -1466,7 +1557,6 @@ function loadURLState() {
 
   });
 
-  // Show Shared Location
   reverseGeocode(
     selectedLocation.lat,
     selectedLocation.lon
