@@ -401,7 +401,7 @@ if (navigator.geolocation) {
 }
 
 L.tileLayer(
-  'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_2s3f_1_b020494e15ca12410693ce95',
+  'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_2s3f_1_b020494e15ca12410693ce95&v=2',
   {
     attribution: '© OpenStreetMap © CARTO',
     subdomains: 'abcd',
