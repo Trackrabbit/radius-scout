@@ -15,9 +15,14 @@ export let realEstateLayer;
 let popupTimeout;
 
 // Initialize base layer
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap © CARTO'
-}).addTo(map);
+L.tileLayer(
+  'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_2s3f_1_b020494e15ca12410693ce95&v=4',
+  {
+    attribution: '© OpenStreetMap © CARTO',
+    subdomains: 'abcd',
+    maxZoom: 20
+  }
+).addTo(map);
 
 export function initMap() {
   resetMapView();
