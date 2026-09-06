@@ -395,9 +395,11 @@ if (navigator.geolocation) {
 }
 
 L.tileLayer(
-  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_2s3f_1_b020494e15ca12410693ce95',
   {
-    attribution:'© OpenStreetMap © CARTO'
+    attribution: '© OpenStreetMap © CARTO',
+    subdomains: 'abcd',
+    maxZoom: 20
   }
 ).addTo(map);
 
@@ -695,41 +697,93 @@ function showLoading(show){
 }
 
 async function reverseGeocode(lat, lon) {
+  // 1. Try official Nominatim
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+    );
+    const data = await res.json();
+    if (data && data.display_name) return data.display_name;
+  } catch (err) {
+    console.warn('Nominatim reverse geocode failed, trying fallback...');
+  }
 
-  const NOMINATIM_SERVERS = [
-    'https://nominatim.openstreetmap.org',
-    'https://nominatim.geocoding.ai'
-  ];
-
-  for (const server of NOMINATIM_SERVERS) {
-
-    try {
-
-      const response = await fetch(
-        `${server}/reverse?format=json&lat=${lat}&lon=${lon}`
-      );
-
-      const text = await response.text();
-
-      if (!text.startsWith('{')) {
-        throw new Error();
-      }
-
-      const data = JSON.parse(text);
-
-      return data.display_name || '';
-
+  // 2. Fallback to Photon
+  try {
+    const res = await fetch(
+      `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`
+    );
+    const data = await res.json();
+    if (data.features && data.features.length) {
+      const p = data.features[0].properties;
+      return [p.name, p.street, p.city, p.state, p.country]
+        .filter(Boolean)
+        .join(', ');
     }
-    catch (err) {
-
-      console.warn(`Reverse geocoder failed: ${server}`);
-
-    }
-
+  } catch (err) {
+    console.warn('Photon reverse geocode failed:', err);
   }
 
   return '';
+}
 
+async function geocode(address) {
+  // 1. Try official Nominatim
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`
+    );
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      document.getElementById('matchedAddress').innerHTML = `
+        <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+          Matched Address
+        </div>
+        <div>
+          ${data[0].display_name}
+        </div>
+      `;
+      return {
+        lat: Number(data[0].lat),
+        lon: Number(data[0].lon)
+      };
+    }
+  } catch (err) {
+    console.warn('Nominatim geocode failed, trying fallback...');
+  }
+
+  // 2. Fallback to Photon (OSM data, CORS enabled, high uptime)
+  try {
+    const res = await fetch(
+      `https://photon.komoot.io/api/?limit=1&q=${encodeURIComponent(address)}`
+    );
+    const data = await res.json();
+    if (data.features && data.features.length > 0) {
+      const feat = data.features[0];
+      const [lon, lat] = feat.geometry.coordinates;
+      const p = feat.properties;
+      const displayName = [p.name, p.street, p.city, p.state, p.postcode]
+        .filter(Boolean)
+        .join(', ') || address;
+
+      document.getElementById('matchedAddress').innerHTML = `
+        <div style="color:#8b5cf6;font-weight:600;margin-bottom:4px;">
+          Matched Address
+        </div>
+        <div>
+          ${displayName}
+        </div>
+      `;
+      return {
+        lat: Number(lat),
+        lon: Number(lon)
+      };
+    }
+  } catch (err) {
+    console.warn('Photon geocode failed:', err);
+  }
+
+  throw new Error('Address service is temporarily unavailable.');
 }
 
 async function geocode(address) {
@@ -907,48 +961,6 @@ function buildQuery(center, radius, keys){
 );
 out center;
 `;
-
-}
-
-async function fetchPOI(center, radius, keys) {
-
-  const query = buildQuery(center, radius, keys);
-
-  for (const server of OVERPASS_SERVERS) {
-
-    try {
-
-      const response = await fetch(server, {
-        method: 'POST',
-        body: query
-      });
-
-      const text = await response.text();
-
-      // Sometimes Overpass returns XML or HTML instead of JSON
-      if (!text.startsWith('{')) {
-        throw new Error('Non-JSON response');
-      }
-
-      const data = JSON.parse(text);
-
-      return data.elements || [];
-
-    }
-    catch (err) {
-
-      console.warn(
-        `Overpass server failed: ${server}`,
-        err
-      );
-
-    }
-
-  }
-
-  throw new Error(
-    'Map data services are busy. Please try again in a few moments.'
-  );
 
 }
 
