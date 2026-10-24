@@ -49,20 +49,25 @@ export async function searchAddresses(query) {
   return await response.json();
 }
 
-//
+// Optimized Overpass QL constructor:
+// Splits into node and way targets, sets max memory ceiling, and adds 'qt' (quad-tile) sort
 export function buildQuery(center, radius, keys) {
   let queryParts = [];
   keys.forEach(key => {
     const poi = POI_CONFIG[key];
+    if (!poi) return;
     poi.filters.forEach(([tag, val]) => {
       if (val === '*') {
-        queryParts.push(`nwr["${tag}"](around:${radius},${center.lat},${center.lon});`);
+        queryParts.push(`node["${tag}"](around:${radius},${center.lat},${center.lon});`);
+        queryParts.push(`way["${tag}"](around:${radius},${center.lat},${center.lon});`);
       } else {
-        queryParts.push(`nwr["${tag}"="${val}"](around:${radius},${center.lat},${center.lon});`);
+        queryParts.push(`node["${tag}"="${val}"](around:${radius},${center.lat},${center.lon});`);
+        queryParts.push(`way["${tag}"="${val}"](around:${radius},${center.lat},${center.lon});`);
       }
     });
   });
-  return `[out:json][timeout:25];\n(\n${queryParts.join('\n')}\n);\nout center;`;
+
+  return `[out:json][timeout:25][maxsize:1073741824];\n(\n${queryParts.join('\n')}\n);\nout center qt;`;
 }
 
 export async function fetchPOI(center, radius, keys) {
