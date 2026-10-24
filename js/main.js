@@ -238,8 +238,17 @@ function loadURLState() {
 
   if (!lat || !lon) return;
 
-  selectedLocation = { lat: Number(lat), lon: Number(lon) };
-  if (radius) document.getElementById('radiusSelect').value = radius;
+  history.replaceState({}, '', window.location.pathname);
+
+  selectedLocation = { 
+    lat: Number(lat), 
+    lon: Number(lon) 
+  };
+
+  if (radius) {
+    const radiusSelect = document.getElementById('radiusSelect');
+    if (radiusSelect) radiusSelect.value = radius;
+  }
 
   Object.keys(POI_STATE).forEach(key => POI_STATE[key] = false);
   if (poi) {
