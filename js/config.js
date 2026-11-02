@@ -46,10 +46,6 @@ export const POI_GROUPS = {
   realestate: "🏠 Real Estate"
 };
 
-export const NOMINATIM_SERVERS = [
-  'https://nominatim.openstreetmap.org'
-];
-
 // GLOBAL STATE
 export const POI_STATE = {};
 
