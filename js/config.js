@@ -47,8 +47,7 @@ export const POI_GROUPS = {
 };
 
 export const NOMINATIM_SERVERS = [
-  'https://nominatim.openstreetmap.org',
-  'https://nominatim.geocoding.ai'
+  'https://nominatim.openstreetmap.org'
 ];
 
 // GLOBAL STATE
