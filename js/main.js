@@ -396,7 +396,28 @@ if (exportBtn) {
           <style>
             /* Force the elements to look good and PREVENT page-break chopping */
             .property-card { page-break-inside: avoid !important; border: 1px solid #d1d5db; padding: 15px; border-radius: 8px; margin-bottom: 15px; background-color: #ffffff; }
-            .summary-item { page-break-inside: avoid !important; border: 1px solid #e5e7eb; padding: 12px; border-radius: 8px; background-color: #f9fafb; text-align: center; margin-bottom: 10px;}
+            
+            /* FIX 3: Force light mode styling on the summary cards specifically for the PDF */
+            .summary-card { 
+              page-break-inside: avoid !important; 
+              border: 1px solid #e5e7eb !important; 
+              padding: 12px !important; 
+              border-radius: 8px !important; 
+              background-color: #f9fafb !important; 
+              text-align: center !important; 
+            }
+            .summary-label {
+              font-size: 13px !important;
+              color: #4b5563 !important;
+              margin-bottom: 8px !important;
+              display: block !important;
+            }
+            .summary-value {
+              font-size: 22px !important;
+              font-weight: 700 !important;
+              color: #111827 !important;
+            }
+            
             h1, h2, h3 { margin-top: 0; }
           </style>
           
