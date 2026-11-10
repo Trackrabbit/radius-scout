@@ -6,43 +6,33 @@ import { POI_CONFIG } from './config.js';
 // The URL of your new Cloudflare Worker Proxy
 export const PROXY_URL = 'https://radius-scout-proxy.ajamespage.workers.dev';
 
-// Helper to format Photon's GeoJSON properties into a readable address string
-function formatPhotonAddress(props) {
-  return [props.name, props.housenumber, props.street, props.city, props.state]
-    .filter(Boolean)
-    .join(', ');
-}
-
 export async function reverseGeocode(lat, lon) {
   try {
-    const response = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`);
+    const response = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?f=json&location=${lon},${lat}`);
     const data = await response.json();
-    if (data.features && data.features.length > 0) {
-      return formatPhotonAddress(data.features[0].properties);
+    if (data.address) {
+      return data.address.Match_addr || 'Selected Location';
     }
   } catch (err) {
-    console.warn(`Photon reverse geocoder failed:`, err);
+    console.warn(`ArcGIS reverse geocoder failed:`, err);
   }
   return 'Selected Location';
 }
 
 export async function geocode(address) {
   try {
-    const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(address)}&limit=1`);
+    const response = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(address)}&maxLocations=1`);
     const data = await response.json();
     
-    if (!data.features || data.features.length === 0) {
+    if (!data.candidates || data.candidates.length === 0) {
       throw new Error('No coordinates found for this address.');
     }
 
-    // Photon returns GeoJSON coordinates as [Longitude, Latitude]
-    const coords = data.features[0].geometry.coordinates;
-    const displayName = formatPhotonAddress(data.features[0].properties);
-
+    const match = data.candidates[0];
     return {
-      lat: Number(coords[1]),
-      lon: Number(coords[0]),
-      display_name: displayName || address
+      lat: match.location.y,
+      lon: match.location.x,
+      display_name: match.address
     };
   } catch (err) {
     console.error("Geocoding failed:", err);
@@ -52,19 +42,16 @@ export async function geocode(address) {
 
 export async function searchAddresses(query) {
   try {
-    const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`);
+    const response = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(query)}&maxLocations=5`);
     const data = await response.json();
     
-    if (!data.features) return [];
+    if (!data.candidates) return [];
 
-    return data.features.map(f => {
-      const coords = f.geometry.coordinates;
-      return {
-        display_name: formatPhotonAddress(f.properties) || 'Unknown Location',
-        lat: Number(coords[1]),
-        lon: Number(coords[0])
-      };
-    });
+    return data.candidates.map(c => ({
+      display_name: c.address,
+      lat: c.location.y,
+      lon: c.location.x
+    }));
   } catch (err) {
     console.error("Autocomplete failed:", err);
     return [];
