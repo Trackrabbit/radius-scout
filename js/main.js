@@ -489,4 +489,32 @@ initUI({
   onFilterToggle: handleFilterToggle
 });
 
-loadURLState();
+// Load shared state from URL parameters first; otherwise, auto-focus user location on initial load
+const params = new URLSearchParams(window.location.search);
+if (params.get('lat') && params.get('lon')) {
+  loadURLState();
+} else {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      async position => {
+        try {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          selectedLocation = { lat, lon };
+
+          map.setView([lat, lon], 15);
+          const address = await reverseGeocode(lat, lon);
+          
+          document.getElementById('addressInput').value = address;
+          setMatchedAddress('Current Location', address);
+        } catch (err) {
+          console.warn("Auto-geolocation reverse geocode failed:", err);
+        }
+      },
+      error => {
+        console.log("Geolocation permission not granted or available on load.");
+      },
+      { timeout: 7000, maximumAge: 60000 }
+    );
+  }
+}
